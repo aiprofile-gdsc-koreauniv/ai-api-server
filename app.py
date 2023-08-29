@@ -97,7 +97,7 @@ async def buildFaceModel(req_id:str, img_str_list: List[str], idx: int) -> str |
 
         # TODO: upload intermediate base64_safetensors to bucket
         if is_succ:
-            logger.info(f"Success-swap_face-req_id:{req_id}/{idx}" )
+            logger.info(f"Success-build_face-req_id:{req_id}/{idx}" )
             return response
         else:
             logger.error("Error-"+"build_face-" + "req_id:" + req_id + "-" +"detail:"+"RequestFail")

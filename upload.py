@@ -20,6 +20,5 @@ def upload_image_to_gcs(image: PIL.Image.Image, dest_file_name: str):
 
     # Upload the bytes to GCS
     blob.upload_from_file(image_bytes, content_type="image/png")
-    logger.info("Success-"+"upload_gcs-" + "url:" + dest_file_name )
-    print(f"Image uploaded to {BUCKET_PREFIX}/{dest_file_name}.")
+    logger.info(f"Success-upload_gcs-url:{BUCKET_PREFIX}/{dest_file_name}" )
 
