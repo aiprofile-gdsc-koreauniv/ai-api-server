@@ -1,0 +1,8 @@
+.history/
+.vscode/
+__pycache__/
+server.log
+uploads/*
+*.json
+.env
+.DS_Store
