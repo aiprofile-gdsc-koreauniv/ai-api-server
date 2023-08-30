@@ -10,8 +10,8 @@ from typing import List
 from PIL import Image
 from logger import logger
 import utils
-import upload
-from models import FaceListPayload, FaceSwapPayload, PresetParam, UploadImgParam, getBuildFaceModelPayload
+import cloud_utils
+from models import FaceListPayload, FaceSwapPayload, PresetParam, UploadImgParam, DownloadImgParam, getBuildFaceModelPayload
 from config import WEBUI_URL, BUCKET_PREFIX, FORMAT_DATE
 
 
@@ -50,15 +50,20 @@ async def getImagePreset(item: PresetParam):
 @app.post("/test/img/upload")
 async def uploadImage(item: UploadImgParam):
     decoded_bytes = base64.b64decode(item.image)
-
-    # Create a BytesIO object from the decoded bytes
     image_bytes_io = io.BytesIO(decoded_bytes)
-
-    # Open the BytesIO object as a PIL Image
     pil_image = Image.open(image_bytes_io)
     
-    upload.upload_image_to_gcs(pil_image, f"{item.id}/{item.idx}.png")
+    cloud_utils.upload_image_to_gcs(pil_image, f"{item.id}/{item.idx}.png")
     return {"status":"done"}
+
+
+@app.get("/test/img/download")
+async def downloadImage(item: DownloadImgParam):
+    result_img = cloud_utils.download_image_from_gcs(item.image_path)
+    image_bytes = io.BytesIO()
+    result_img.save(image_bytes, format="PNG")
+    image_bytes.seek(0)
+    return StreamingResponse(content=image_bytes, media_type="image/png")
 
 
 @app.post("/api/img/process")
@@ -66,27 +71,36 @@ async def getBuildFaceModel(item: getBuildFaceModelPayload):
     logger.info("")
     logger.info(f"*********************")
     logger.info(f"Request: {item.id} start")
-    logger.info(f"recieved: {len(item.image_list)} images")
     start_time = time.time()
     
+    src_imgs: List[Image.Image] = []
     result_urls: List[str] = []
     
+    for image_path in item.image_paths:
+        src_imgs.append(cloud_utils.download_image_from_gcs(image_path))
+    logger.info(f"recieved: {len(src_imgs)} images")
+    
     start_time_build = time.time()
-    face_model = await buildFaceModel(req_id=item.id, img_str_list=item.image_list)
+    face_model = await buildFaceModel(req_id=item.id, img_list=src_imgs)
     end_time_build = time.time()
 
-    preset_img_list = utils.loadPresetImages(is_male=item.param.is_male, is_black=item.param.is_black, univ=item.param.univ, cnt=item.cnt)
+    preset_img_list_kor = utils.loadPresetImages(is_male=item.param.is_male, is_black=item.param.is_black, univ="korea", cnt=2)
+    preset_img_list_yon = utils.loadPresetImages(is_male=item.param.is_male, is_black=item.param.is_black, univ="yonsei", cnt=1)
+    preset_img_list = preset_img_list_kor + preset_img_list_yon
     
     start_time_swap = time.time()
-    for idx in range(item.cnt):
+    for idx in range(3):
         result_img_str = await swapFaceApi(req_id=item.id, face_model=face_model, src_img=preset_img_list[idx])
         result_img = utils.decodeBase642Img(result_img_str)
 
         # @@ TODO : OpenCV -> result_img modification
+        # @@ 0 idx : crimson fix
+        # @@ 1 idx / 2 idx : tuple(korea, yonsei)
+        # @@ FrameFolder -> dockerfile fix / Load Frame / Concat frame&img
 
-        file_url = upload.upload_image_to_gcs(result_img, f"{item.id}/{idx}.png")
+        file_url = cloud_utils.upload_image_to_gcs(result_img, f"{item.id}/{idx}.png")
         result_urls.append(file_url)
-        logger.info(f"{idx+1}/{item.cnt} Done!")
+        logger.info(f"{idx+1}/3 Done!")
     end_time_swap = time.time()
     
     end_time = time.time()
@@ -96,15 +110,17 @@ async def getBuildFaceModel(item: getBuildFaceModelPayload):
     logger.info(f"Swap time: {(end_time_swap-start_time_swap):.2f} seconds")
     logger.info(f"Total time: {execution_time:.2f} seconds")
     logger.info(f"*********************")
-
     
-    return {"id": item.id, "images" : result_urls}
+    return {"id": item.id, "image_paths" : result_urls}
 
 
 # @@ WebUI_API ############################
-async def buildFaceModel(req_id:str, img_str_list: List[str]) -> str | None:
+async def buildFaceModel(req_id:str, img_list: List[Image.Image]) -> str | None:
     try:
         face_build_url = WEBUI_URL + "/faceswaplab/build"
+        img_str_list = []
+        for img in img_list:
+            img_str_list.append(utils.encodeImg2Base64(img))
         (is_succ ,response) = await utils.requestPostAsync(face_build_url, img_str_list)
 
         # TODO: upload intermediate base64_safetensors to bucket

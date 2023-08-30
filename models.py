@@ -43,8 +43,15 @@ class UploadImgParam(BaseModel):
     image: str
 
 
+class DownloadImgParam(BaseModel):
+    image_path: str
+
+
+class APIPresetParam(BaseModel):
+    is_male: bool
+    is_black: bool
+
 class getBuildFaceModelPayload(BaseModel):
     id: str
-    cnt: int
-    param: PresetParam
-    image_list: List[str]
+    param: APIPresetParam
+    image_paths: List[str]

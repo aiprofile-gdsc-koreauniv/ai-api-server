@@ -13,7 +13,7 @@ FORMAT_DATE = current_date.strftime("%Y-%m-%d")
 # @@ Config ############################
 WEBUI_URL = os.environ.get('WEBUI_URL')
 API_BASE_URL = os.environ.get('API_BASE_URL')
-TIMEOUT_SEC = 120
+TIMEOUT_SEC = 180
 LOG_PATH = os.environ.get('LOG_PATH')
 PRESET_DIR = os.environ.get('PRESET_DIR')
 BUCKET_PREFIX = os.environ.get('BUCKET_PREFIX') + "/" +FORMAT_DATE
