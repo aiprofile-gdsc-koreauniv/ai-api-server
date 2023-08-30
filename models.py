@@ -34,7 +34,7 @@ class Color(Enum):
 class PresetParam(BaseModel):
     is_male: bool
     is_black: bool
-    color: int
+    univ: str
 
 
 class UploadImgParam(BaseModel):
@@ -45,6 +45,6 @@ class UploadImgParam(BaseModel):
 
 class getBuildFaceModelPayload(BaseModel):
     id: str
-    idx: int
+    cnt: int
     param: PresetParam
     image_list: List[str]

@@ -16,9 +16,10 @@ API_BASE_URL = os.environ.get('API_BASE_URL')
 TIMEOUT_SEC = 120
 LOG_PATH = os.environ.get('LOG_PATH')
 PRESET_DIR = os.environ.get('PRESET_DIR')
-BUCKET_PREFIX = os.environ.get('BUCKET_PREFIX') + FORMAT_DATE
+BUCKET_PREFIX = os.environ.get('BUCKET_PREFIX') + "/" +FORMAT_DATE
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 GCP_CREDENTIAL = os.environ.get('GCP_CREDENTIAL')
+GCS_URL_PREFIX="https://storage.cloud.google.com"
 
 if not os.path.exists(PRESET_DIR):
     os.makedirs(PRESET_DIR+"/male/white/red")

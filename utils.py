@@ -64,28 +64,39 @@ async def requestPostAsync(url, payload):
             return (False, e)
 
 
-def loadPresetImage(is_male: bool, is_black: bool, color: int) -> Image.Image:
+def loadPresetImages(is_male: bool, is_black: bool, univ: str, cnt:int ) -> List[Image.Image]:
     target_dir = PRESET_DIR  # 해당 폴더 경로로 바꿔주세요
+    target_dir_white = PRESET_DIR
+    
+    result = []
+    
+    if cnt == 0:
+        logger.error(f"Error - load_image - InvalidCnt: {cnt}")
+        raise HTTPException(status_code=400, detail={"message":"Invalid cnt", "cnt":cnt})
 
     if is_male:
         target_dir =os.path.join(target_dir, "male")
+        target_dir_white =os.path.join(target_dir, "male")
     else:
         target_dir =os.path.join(target_dir, "female")
+        target_dir_white =os.path.join(target_dir, "female")
     
     if is_black:
         target_dir =os.path.join(target_dir, "black")
+        target_dir_white =os.path.join(target_dir, "black")
     else:
         target_dir =os.path.join(target_dir, "white")
+        target_dir_white =os.path.join(target_dir, "white")
     
-    if color == 0:
+    if univ == "korea":
         target_dir =os.path.join(target_dir, "red")
-    elif color == 1:
+        target_dir_white =os.path.join(target_dir, "red")
+    elif univ == "yonsei":
         target_dir =os.path.join(target_dir, "blue")
-    elif color == 2:
-        target_dir =os.path.join(target_dir, "white")
+        target_dir_white =os.path.join(target_dir, "blue")
     else:
-        logger.error("Error-"+"load_image-" + "InvalidColorIdx:" + str(color))
-        raise HTTPException(status_code=400, detail={"message":"Invalid Color", "idx":color})
+        logger.error(f"Error - load_image - InvalidUnivIdx: {univ}")
+        raise HTTPException(status_code=400, detail={"message":"Invalid Univ", "idx":univ})
 
     # 모든 .png 파일 찾기
     png_files = []
@@ -94,22 +105,36 @@ def loadPresetImage(is_male: bool, is_black: bool, color: int) -> Image.Image:
             if file.lower().endswith(".png"):
                 png_files.append(os.path.join(root, file))
 
+    for root, dirs, files in os.walk(target_dir_white):
+        for file in files:
+            if file.lower().endswith(".png"):
+                png_files.append(os.path.join(root, file))
+
     # .png 파일이 없는 경우
     if not png_files:
-        print("No .png files found.")
-        logger.error("Error-"+"load_image-" + "NoPresetImage:" + str(color))
-        raise HTTPException(status_code=500, detail={"message":"No Preset Image","is_male:" : is_male, "is_black":is_black, "color":color })
+        logger.error(f"Error - load_image - NoPresetImage: male={is_male}, b={is_black}, univ={univ}")
+        raise HTTPException(status_code=400, detail={"message":"No Preset Image","is_male:" : is_male, "is_black":is_black, "univ": univ })
     else:
         # 랜덤으로 하나의 .png 파일 선택
-        selected_png = random.choice(png_files)
-        
+        try:
+            result_img_path = []
+            dbg_len = len(png_files)
+            for _ in range(cnt):
+                selected_png = random.choice(png_files)
+                result_img_path.append(selected_png)
+                png_files.remove(selected_png)
+        except Exception as e:
+            logger.error(f"Error - load_image - NotEnoughPreset: requested {cnt} has {dbg_len} - detail: {e}")
+            raise HTTPException(status_code=400, detail={"message":"TooManyImgRequested","cnt:" : cnt })
+    
         # 선택한 .png 이미지 열기
         try:
-            img = Image.open(selected_png)
+            for _ in range(cnt):
+                result.append(Image.open(result_img_path.pop(0)))
         except Exception as e:
-            logger.error("Error-"+"load_image-" + "CanNotOpenImg:" + selected_png)
+            logger.error(f"Error - load_image - CanNotOpenImg: {selected_png} - detail: {e}")
             raise HTTPException(status_code=500, detail={"message":"CanNotOpenImg","path:" : selected_png })
-    return img
+    return result
 
 
 def encodeImg2Base64(img: Image.Image) -> str:
@@ -117,6 +142,10 @@ def encodeImg2Base64(img: Image.Image) -> str:
     img.save(image_bytes, format="PNG")
     image_bytes.seek(0)
 
-    # Encode the bytes to Base64
     return base64.b64encode(image_bytes.read()).decode("utf-8")
 
+
+def decodeBase642Img(base64_str: str)-> Image.Image:
+    decoded_bytes = base64.b64decode(base64_str)
+    image_bytes_io = io.BytesIO(decoded_bytes)
+    return Image.open(image_bytes_io)
