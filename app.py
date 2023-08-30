@@ -12,7 +12,7 @@ from logger import logger
 import utils
 import cloud_utils
 from models import FaceListPayload, FaceSwapPayload, PresetParam, UploadImgParam, DownloadImgParam, getBuildFaceModelPayload
-from config import WEBUI_URL, BUCKET_PREFIX, FORMAT_DATE
+from config import WEBUI_URL
 
 
 app = FastAPI()
@@ -20,10 +20,20 @@ app = FastAPI()
 
 # @@ APIHandler ############################
 @app.get("/api/status/")
-async def upload_item():
+async def checkStatus():
     current_time = datetime.now()
     time_str = current_time.strftime("%Y-%m-%d %H:%M:%S")
-    return {"status": "200", "datetime": time_str}
+    webui_status = await utils.simpleRequestGetAsync(f"{WEBUI_URL}/user")
+    if webui_status:
+        return JSONResponse(
+            status_code=200,
+            content={"status": "200", "webui_status": "Connected", "datetime": time_str}
+        )
+    else:
+        return JSONResponse(
+            status_code=500,
+            content={"status": "500", "webui_status": "Not Connected", "datetime": time_str}
+        )
 
 
 @app.post("/test/webui/build")
@@ -71,6 +81,14 @@ async def getBuildFaceModel(item: getBuildFaceModelPayload):
     logger.info("")
     logger.info(f"*********************")
     logger.info(f"Request: {item.id} start")
+    webui_status = await utils.simpleRequestGetAsync(f"{WEBUI_URL}/user")
+    if not webui_status:
+        logger.error("Error - webui_status: Not Connected")
+        return JSONResponse(
+            status_code=500,
+            content={"status": "500", "webui_status": "Not Connected"}
+        )
+    
     start_time = time.time()
     
     src_imgs: List[Image.Image] = []
@@ -78,7 +96,7 @@ async def getBuildFaceModel(item: getBuildFaceModelPayload):
     
     for image_path in item.image_paths:
         src_imgs.append(cloud_utils.download_image_from_gcs(image_path))
-    logger.info(f"recieved: {len(src_imgs)} images")
+    logger.info(f"gcs-recieved: {len(src_imgs)} images")
     
     start_time_build = time.time()
     face_model = await buildFaceModel(req_id=item.id, img_list=src_imgs)

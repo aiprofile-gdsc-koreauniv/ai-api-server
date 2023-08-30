@@ -30,6 +30,20 @@ def convertStrList2Img(img_str_list: List[str]) -> List[Image.Image]:
     return res
 
 
+async def simpleRequestGetAsync(url):
+    async with httpx.AsyncClient() as client:
+        try:
+            # Send async GET request to the external API
+            response = await client.get(url)
+
+            # Check if the request was successful (status code 200)
+            if response.status_code // 100 == 2:
+                return True
+        except httpx.RequestError as e:
+            logger.error(f"Error - simple_req - url: {url}")
+        return False
+
+
 async def requestGetAsync(url):
     async with httpx.AsyncClient() as client:
         try:

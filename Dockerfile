@@ -12,13 +12,14 @@ COPY app.py /app/
 COPY models.py /app/
 COPY presets /app/presets
 COPY requirements.txt /app/
-COPY upload.py /app/
+COPY cloud_utils.py /app/
 COPY utils.py /app/
-COPY .env /app/
+# COPY .env /app/
 
 # 필요한 패키지 설치
 RUN pip install --no-cache-dir -r requirements.txt
 
+EXPOSE 9001
 
 # 컨테이너 실행 시 실행할 명령
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "9001"]
