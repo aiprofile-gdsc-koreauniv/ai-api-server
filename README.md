@@ -10,7 +10,7 @@
    git clone https://github.com/aiprofile-gdsc-koreauniv/ai-api-server
    ```
 2. Crendential을 작업폴더에 넣습니다.
-   - GCP Credential과 .env를 현재 폴더에 위치합니다.
+   - GCP Credential과 현재 폴더에 위치합니다.
 
 
 3. Docker 이미지 빌드
@@ -20,7 +20,12 @@
 
 4. Docker 실행
    ```bash
-   docker run -d -p 9001:9001 -v $PWD:/app MY_CONTAINER_NAME
+   docker run -d \
+      -p 9001:9001 \
+      -v $PWD:/app \
+      -e ENV_VAR1=VALUE1 \
+      -e ENV_VAR2=VALUE2 \
+      MY_CONTAINER_NAME
    ```
 
 ## 참고사항
