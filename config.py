@@ -20,6 +20,7 @@ BUCKET_PREFIX = os.environ.get('BUCKET_PREFIX') + "/" +FORMAT_DATE
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 GCP_CREDENTIAL = os.environ.get('GCP_CREDENTIAL')
 GCS_URL_PREFIX="https://storage.cloud.google.com"
+KEY = os.environ.get('KEY')
 
 if not os.path.exists(PRESET_DIR):
     os.makedirs(PRESET_DIR+"/male/white/red")
@@ -34,3 +35,6 @@ if not os.path.exists(PRESET_DIR):
     os.makedirs(PRESET_DIR+"/female/black/red")
     os.makedirs(PRESET_DIR+"/female/black/blue")
     os.makedirs(PRESET_DIR+"/female/black/white")
+
+def test():
+    return WEBUI_URL

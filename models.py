@@ -51,7 +51,21 @@ class APIPresetParam(BaseModel):
     is_male: bool
     is_black: bool
 
-class getBuildFaceModelPayload(BaseModel):
+
+class UpdateUrlParam(BaseModel):
+    url: str
+    k: str
+    
+class AuthorizedParam(BaseModel):
+    k: str
+
+
+class ProcessRequestParam(BaseModel):
     id: str
     param: APIPresetParam
+    image_paths: List[str]
+
+
+class ProcessResponse(BaseModel):
+    id: str
     image_paths: List[str]

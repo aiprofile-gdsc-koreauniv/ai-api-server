@@ -11,15 +11,23 @@ from PIL import Image
 from logger import logger
 import utils
 import cloud_utils
-from models import FaceListPayload, FaceSwapPayload, PresetParam, UploadImgParam, DownloadImgParam, getBuildFaceModelPayload
-from config import WEBUI_URL
+from models import FaceListPayload, FaceSwapPayload, PresetParam, UploadImgParam, DownloadImgParam, ProcessRequestParam, UpdateUrlParam, AuthorizedParam, ProcessResponse
+from config import WEBUI_URL, KEY
+import config
 
 
-app = FastAPI()
+app = FastAPI(
+    title="AI-Profile-Diffusion-Server",
+    description="ai-profile 프로젝트의 AI-API Server입니다.\n\n 서비스 URL: [호랑이 사진관](https://horangstudio.com)",
+    contact={
+        "name": "Kyumin Kim",
+        "email": "dev.kyoomin@gmail.com",
+    },
+)
 
 
 # @@ APIHandler ############################
-@app.get("/api/status/")
+@app.get("/api/status/", tags=["API"])
 async def checkStatus():
     current_time = datetime.now()
     time_str = current_time.strftime("%Y-%m-%d %H:%M:%S")
@@ -36,48 +44,32 @@ async def checkStatus():
         )
 
 
-@app.post("/test/webui/build")
-async def getFaceModel(item: FaceListPayload):
-    result = await buildFaceModel(req_id="123id", img_str_list=item.img_list)
-    return {"result": result}
+@app.patch("/api/url", tags=["Config"])
+async def update_url(item: UpdateUrlParam):
+    global WEBUI_URL
+    if item.k != KEY:
+        return JSONResponse(
+            status_code=500,
+            content={"status": "401", "detail": "Unauthorized"}
+        )
+    new_url = item.url
+    config.WEBUI_URL = new_url
+    WEBUI_URL = new_url
+    return {"message": "WEBUI_URL updated successfully", "detail":{"1": config.WEBUI_URL, "2": WEBUI_URL}}
 
 
-@app.post("/test/webui/swap")
-async def getSwappedFace(item: FaceSwapPayload):
-    result = await swapFaceApi(req_id="123id", face_model=item.face_model, src_img=item.src_img)
-    return {"result": result}
+@app.get("/api/url", tags=["Config"])
+async def get_url(item: AuthorizedParam):
+    if item.k != KEY:
+        return JSONResponse(
+            status_code=500,
+            content={"status": "401", "detail": "Unauthorized"}
+        )
+    return {"message": "WEBUI_URL", "detail": {"1": config.WEBUI_URL, "2": WEBUI_URL}}
 
 
-@app.get("/test/img/preset")
-async def getImagePreset(item: PresetParam):
-    result_imgs = utils.loadPresetImages(is_male=item.is_male, is_black=item.is_black, univ=item.univ, cnt=1)
-    image_bytes = io.BytesIO()
-    result_imgs[0].save(image_bytes, format="PNG")
-    image_bytes.seek(0)
-    return StreamingResponse(content=image_bytes, media_type="image/png")
-
-
-@app.post("/test/img/upload")
-async def uploadImage(item: UploadImgParam):
-    decoded_bytes = base64.b64decode(item.image)
-    image_bytes_io = io.BytesIO(decoded_bytes)
-    pil_image = Image.open(image_bytes_io)
-    
-    cloud_utils.upload_image_to_gcs(pil_image, f"{item.id}/{item.idx}.png")
-    return {"status":"done"}
-
-
-@app.get("/test/img/download")
-async def downloadImage(item: DownloadImgParam):
-    result_img = cloud_utils.download_image_from_gcs(item.image_path)
-    image_bytes = io.BytesIO()
-    result_img.save(image_bytes, format="PNG")
-    image_bytes.seek(0)
-    return StreamingResponse(content=image_bytes, media_type="image/png")
-
-
-@app.post("/api/img/process")
-async def getBuildFaceModel(item: getBuildFaceModelPayload):
+@app.post("/api/img/process", tags=["API"]) 
+async def getBuildFaceModel(item: ProcessRequestParam)-> ProcessResponse:
     logger.info("")
     logger.info(f"*********************")
     logger.info(f"Request: {item.id} start")
@@ -132,6 +124,46 @@ async def getBuildFaceModel(item: getBuildFaceModelPayload):
     return {"id": item.id, "image_paths" : result_urls}
 
 
+@app.post("/test/webui/build", tags=["Test"])
+async def getFaceModel(item: FaceListPayload):
+    result = await buildFaceModel(req_id="123id", img_str_list=item.img_list)
+    return {"result": result}
+
+
+@app.post("/test/webui/swap", tags=["Test"])
+async def getSwappedFace(item: FaceSwapPayload):
+    result = await swapFaceApi(req_id="123id", face_model=item.face_model, src_img=item.src_img)
+    return {"result": result}
+
+
+@app.get("/test/img/preset", tags=["Test"])
+async def getImagePreset(item: PresetParam):
+    result_imgs = utils.loadPresetImages(is_male=item.is_male, is_black=item.is_black, univ=item.univ, cnt=1)
+    image_bytes = io.BytesIO()
+    result_imgs[0].save(image_bytes, format="PNG")
+    image_bytes.seek(0)
+    return StreamingResponse(content=image_bytes, media_type="image/png")
+
+
+@app.post("/test/img/upload", tags=["Test"])
+async def uploadImage(item: UploadImgParam):
+    decoded_bytes = base64.b64decode(item.image)
+    image_bytes_io = io.BytesIO(decoded_bytes)
+    pil_image = Image.open(image_bytes_io)
+    
+    cloud_utils.upload_image_to_gcs(pil_image, f"{item.id}/{item.idx}.png")
+    return {"status":"done"}
+
+
+@app.get("/test/img/download", tags=["Test"])
+async def downloadImage(item: DownloadImgParam):
+    result_img = cloud_utils.download_image_from_gcs(item.image_path)
+    image_bytes = io.BytesIO()
+    result_img.save(image_bytes, format="PNG")
+    image_bytes.seek(0)
+    return StreamingResponse(content=image_bytes, media_type="image/png")
+
+
 # @@ WebUI_API ############################
 async def buildFaceModel(req_id:str, img_list: List[Image.Image]) -> str | None:
     try:
@@ -167,7 +199,21 @@ async def swapFaceApi(req_id: str, face_model: str, src_img: str)-> str:
                         0
                     ]
                 }
-            ]
+            ],
+            "postprocessing": {
+                "upscaler_name": "R-ESRGAN 4x+",
+                "scale": 1,
+                "upscaler_visibility": 1,
+                "inpainting_when": "After All",
+                    "inpainting_options": {
+                        "inpainting_denoising_strengh": 0.2,
+                        "inpainting_prompt": "Portrait of a [gender]",
+                        "inpainting_steps": 20,
+                        "inpainting_sampler": "DPM++ 2M SDE Karras",
+                        "inpainting_model": "Current",
+                        "inpainting_seed": -1
+                    }
+            }
         })
         (is_succ, response) = await utils.requestPostAsync(face_swap_url, swap_api_payload)
         if is_succ:
@@ -181,20 +227,10 @@ async def swapFaceApi(req_id: str, face_model: str, src_img: str)-> str:
         return {"error" :e}
 
 
-class ErrorResponse(BaseModel):
-    detail: str
-
-
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request, exc):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content=exc
-    )
-
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request, exc):
+    
     return JSONResponse(
         status_code=500,
         content={"detail":"Internal server error", "exception": exc}

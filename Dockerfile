@@ -10,11 +10,11 @@ COPY config.py /app/
 COPY logger.py /app/
 COPY app.py /app/
 COPY models.py /app/
-COPY presets /app/presets
+COPY presets/ /app/presets/
 COPY requirements.txt /app/
 COPY cloud_utils.py /app/
 COPY utils.py /app/
-# COPY .env /app/
+COPY .env /app/
 
 # 필요한 패키지 설치
 RUN pip install --no-cache-dir -r requirements.txt
