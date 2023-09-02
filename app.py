@@ -60,12 +60,7 @@ async def update_url(item: UpdateUrlParam):
 
 
 @app.get("/api/url", tags=["Config"])
-async def get_url(item: AuthorizedParam):
-    if item.k != CONFIG_KEY:
-        return JSONResponse(
-            status_code=500,
-            content={"status": "401", "detail": "Unauthorized"}
-        )
+async def get_url():
     return {"message": "WEBUI_URL", "detail": {"1": config.WEBUI_URL, "2": WEBUI_URL}}
 
 
