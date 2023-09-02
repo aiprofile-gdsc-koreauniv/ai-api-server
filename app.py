@@ -28,7 +28,7 @@ app = FastAPI(
 
 
 # @@ APIHandler ############################
-@app.get("/api/status/", tags=["API"])
+@app.get("/api/status", tags=["API"])
 async def checkStatus():
     current_time = datetime.now()
     time_str = current_time.strftime("%Y-%m-%d %H:%M:%S")
