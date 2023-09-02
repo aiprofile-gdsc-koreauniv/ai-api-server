@@ -5,7 +5,7 @@ from typing import List
 import httpx
 import base64
 from logger import logger
-from config import TIMEOUT_SEC, PRESET_DIR
+from config import TIMEOUT_SEC, PRESET_DIR, ROUND_MASK_PATH, MASK_PATH, FRAME_PATH
 import random
 from fastapi import HTTPException
 
@@ -89,18 +89,18 @@ def loadPresetImages(is_male: bool, is_black: bool, univ: str, cnt:int ) -> List
         raise HTTPException(status_code=400, detail={"message":"Invalid cnt", "cnt":cnt})
 
     if is_male:
-        target_dir =os.path.join(target_dir, "male")
-        target_dir_white =os.path.join(target_dir, "male")
+        target_dir =os.path.join(target_dir, "man")
+        target_dir_white =os.path.join(target_dir, "man")
     else:
-        target_dir =os.path.join(target_dir, "female")
-        target_dir_white =os.path.join(target_dir, "female")
+        target_dir =os.path.join(target_dir, "woman")
+        target_dir_white =os.path.join(target_dir, "woman")
     
     if is_black:
         target_dir =os.path.join(target_dir, "black")
         target_dir_white =os.path.join(target_dir, "black")
     else:
-        target_dir =os.path.join(target_dir, "white")
-        target_dir_white =os.path.join(target_dir, "white")
+        target_dir =os.path.join(target_dir, "asian")
+        target_dir_white =os.path.join(target_dir, "asian")
     
     if univ == "korea":
         target_dir =os.path.join(target_dir, "red")
@@ -163,3 +163,40 @@ def decodeBase642Img(base64_str: str)-> Image.Image:
     decoded_bytes = base64.b64decode(base64_str)
     image_bytes_io = io.BytesIO(decoded_bytes)
     return Image.open(image_bytes_io)
+
+
+def merge_frame(image=None, frame=None,
+                image_path=None, frame_path=None,
+                frame_number=None,
+                result_path=None) -> Image.Image:
+
+    ## Load PIL Image instance of frame / image from path if Image instances were not given
+    if image is None and image_path is not None:
+        image = Image.open(image_path).convert("RGBA")
+    if frame is None and frame_path is not None:
+        frame = Image.open(frame_path).convert("RGBA")
+
+    ## Load mask image instance accorading to the frame_number
+    mask_path = ROUND_MASK_PATH if frame_number == 1 else MASK_PATH
+    mask = Image.open(mask_path).convert("L")
+
+    ## Set the left-top coordinate of the masked area of the frame
+    if frame_number == 0: paste_coord = (43, 172)
+    elif frame_number in (1, 2): paste_coord = (43, 211)
+    elif frame_number in (3, 4): paste_coord = (43, 197)
+    else: ...
+
+    ## Resize image to (1040, 1428)
+    image_cropped = image.resize((1040, 1428), Image.LANCZOS)
+    sample_masked = Image.new("RGBA", image_cropped.size, (255, 255, 255, 0))  # 빈 이미지 생성 (투명 배경)
+    sample_masked.paste(image_cropped, (0, 0), mask=mask)
+
+    ## paste resized image to frame
+    frame.paste(sample_masked, paste_coord, sample_masked)
+
+    # ## save the pasted image
+    # frame.save(result_path)
+    return frame
+
+def getFrame(idx: int, color: str)-> Image.Image:
+    return Image.open(f"{FRAME_PATH}/set{idx}_{color}.png").convert("RGBA")

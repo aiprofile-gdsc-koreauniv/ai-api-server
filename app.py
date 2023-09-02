@@ -12,9 +12,10 @@ from logger import logger
 import utils
 import cloud_utils
 from models import FaceListPayload, FaceSwapPayload, PresetParam, UploadImgParam, DownloadImgParam, ProcessRequestParam, UpdateUrlParam, AuthorizedParam, ProcessResponse
-from config import WEBUI_URL, KEY
+from config import WEBUI_URL, CONFIG_KEY, HOST_NAME, BATCH_NO
 import config
-
+import requests
+import random
 
 app = FastAPI(
     title="AI-Profile-Diffusion-Server",
@@ -35,7 +36,7 @@ async def checkStatus():
     if webui_status:
         return JSONResponse(
             status_code=200,
-            content={"status": "200", "webui_status": "Connected", "datetime": time_str}
+            content={"status": "200", "webui_status": "Connected", "datetime": time_str, "host": HOST_NAME}
         )
     else:
         return JSONResponse(
@@ -47,7 +48,7 @@ async def checkStatus():
 @app.patch("/api/url", tags=["Config"])
 async def update_url(item: UpdateUrlParam):
     global WEBUI_URL
-    if item.k != KEY:
+    if item.k != CONFIG_KEY:
         return JSONResponse(
             status_code=500,
             content={"status": "401", "detail": "Unauthorized"}
@@ -60,7 +61,7 @@ async def update_url(item: UpdateUrlParam):
 
 @app.get("/api/url", tags=["Config"])
 async def get_url(item: AuthorizedParam):
-    if item.k != KEY:
+    if item.k != CONFIG_KEY:
         return JSONResponse(
             status_code=500,
             content={"status": "401", "detail": "Unauthorized"}
@@ -73,6 +74,7 @@ async def getBuildFaceModel(item: ProcessRequestParam)-> ProcessResponse:
     logger.info("")
     logger.info(f"*********************")
     logger.info(f"Request: {item.id} start")
+    
     webui_status = await utils.simpleRequestGetAsync(f"{WEBUI_URL}/user")
     if not webui_status:
         logger.error("Error - webui_status: Not Connected")
@@ -80,6 +82,7 @@ async def getBuildFaceModel(item: ProcessRequestParam)-> ProcessResponse:
             status_code=500,
             content={"status": "500", "webui_status": "Not Connected"}
         )
+        # raise Exception({"status": "500", "webui_status": "Not Connected"})
     
     start_time = time.time()
     
@@ -93,24 +96,35 @@ async def getBuildFaceModel(item: ProcessRequestParam)-> ProcessResponse:
     start_time_build = time.time()
     face_model = await buildFaceModel(req_id=item.id, img_list=src_imgs)
     end_time_build = time.time()
-
-    preset_img_list_kor = utils.loadPresetImages(is_male=item.param.is_male, is_black=item.param.is_black, univ="korea", cnt=2)
-    preset_img_list_yon = utils.loadPresetImages(is_male=item.param.is_male, is_black=item.param.is_black, univ="yonsei", cnt=1)
-    preset_img_list = preset_img_list_kor + preset_img_list_yon
     
     start_time_swap = time.time()
-    for idx in range(3):
-        result_img_str = await swapFaceApi(req_id=item.id, face_model=face_model, src_img=preset_img_list[idx])
-        result_img = utils.decodeBase642Img(result_img_str)
-
-        # @@ TODO : OpenCV -> result_img modification
-        # @@ 0 idx : crimson fix
-        # @@ 1 idx / 2 idx : tuple(korea, yonsei)
-        # @@ FrameFolder -> dockerfile fix / Load Frame / Concat frame&img
-
-        file_url = cloud_utils.upload_image_to_gcs(result_img, f"{item.id}/{idx}.png")
+    for idx in range(BATCH_NO):
+        # Get Preset
+        preset_img_list = utils.loadPresetImages(is_male=item.param.is_male, is_black=item.param.is_black, univ="korea", cnt=2) + utils.loadPresetImages(is_male=item.param.is_male, is_black=item.param.is_black, univ="yonsei", cnt=1)
+        # korea-0
+        portrait_img_str = await swapFaceApi(req_id=item.id, face_model=face_model, src_img=preset_img_list.pop(0))
+        result_img = utils.merge_frame(image=utils.decodeBase642Img(portrait_img_str), frame=utils.getFrame(0, "red"), frame_number=0)
+        file_url = cloud_utils.upload_image_to_gcs(result_img, f"{item.id}/{idx}-0.png")
         result_urls.append(file_url)
-        logger.info(f"{idx+1}/3 Done!")
+        logger.info(f"{(idx*3)+1}/{BATCH_NO*3} Done!")
+        
+        # korea - random set
+        frame_idx = random.choice([1, 2, 3, 4])
+        
+        portrait_img_str = await swapFaceApi(req_id=item.id, face_model=face_model, src_img=preset_img_list.pop(0))
+        result_img = utils.merge_frame(image=utils.decodeBase642Img(portrait_img_str), frame=utils.getFrame(frame_idx, "red"), frame_number=frame_idx)
+        file_url = cloud_utils.upload_image_to_gcs(result_img, f"{item.id}/{idx}-1.png")
+        logger.info(f"{(idx*3)+2}/{BATCH_NO*3} Done!")
+        result_urls.append(file_url)
+        
+        # yonsei - random set
+        portrait_img_str = await swapFaceApi(req_id=item.id, face_model=face_model, src_img=preset_img_list.pop(0))
+        result_img = utils.merge_frame(image=utils.decodeBase642Img(portrait_img_str), frame=utils.getFrame(frame_idx, "blue"), frame_number=frame_idx)
+        file_url = cloud_utils.upload_image_to_gcs(result_img, f"{item.id}/{idx}-2.png")
+        logger.info(f"{(idx*3)+3}/{BATCH_NO*3} Done!")
+        result_urls.append(file_url)
+
+    
     end_time_swap = time.time()
     
     end_time = time.time()
@@ -120,7 +134,9 @@ async def getBuildFaceModel(item: ProcessRequestParam)-> ProcessResponse:
     logger.info(f"Swap time: {(end_time_swap-start_time_swap):.2f} seconds")
     logger.info(f"Total time: {execution_time:.2f} seconds")
     logger.info(f"*********************")
-    
+    time_str = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+    requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
+        data=f"ProcessDone id:{item.id} - date:{time_str}😀😀😀".encode(encoding='utf-8'))
     return {"id": item.id, "image_paths" : result_urls}
 
 
@@ -138,7 +154,7 @@ async def getSwappedFace(item: FaceSwapPayload):
 
 @app.get("/test/img/preset", tags=["Test"])
 async def getImagePreset(item: PresetParam):
-    result_imgs = utils.loadPresetImages(is_male=item.is_male, is_black=item.is_black, univ=item.univ, cnt=1)
+    result_imgs = utils.loadPresetImages(is_male=item.is_male, is_black=item.is_black, univ=item.univ, cnt=100)
     image_bytes = io.BytesIO()
     result_imgs[0].save(image_bytes, format="PNG")
     image_bytes.seek(0)
@@ -185,7 +201,7 @@ async def buildFaceModel(req_id:str, img_list: List[Image.Image]) -> str | None:
         return
 
 
-async def swapFaceApi(req_id: str, face_model: str, src_img: str)-> str:
+async def swapFaceApi(req_id: str, face_model: str, src_img: Image.Image)-> str:
     try:
         face_swap_url = WEBUI_URL + "/faceswaplab/swap_face"
         src_img_base64 = utils.encodeImg2Base64(src_img)
@@ -197,17 +213,24 @@ async def swapFaceApi(req_id: str, face_model: str, src_img: str)-> str:
                     "same_gender": True,
                     "faces_index": [
                         0
-                    ]
+                    ],
+                    "swapping_options": {
+                        "face_restorer_name": "CodeFormer",
+                        "upscaler_name": "R-ESRGAN 4x+",
+                        "improved_mask": True,
+                        "sharpen": False
+                    }
                 }
             ],
             "postprocessing": {
-                "upscaler_name": "R-ESRGAN 4x+",
+                "upscaler_name": "Nearest",
                 "scale": 1,
                 "upscaler_visibility": 1,
                 "inpainting_when": "After All",
                     "inpainting_options": {
                         "inpainting_denoising_strengh": 0.2,
                         "inpainting_prompt": "Portrait of a [gender]",
+                        "inpainting_negative_prompt":"blurry",
                         "inpainting_steps": 20,
                         "inpainting_sampler": "DPM++ 2M SDE Karras",
                         "inpainting_model": "Current",
@@ -227,15 +250,29 @@ async def swapFaceApi(req_id: str, face_model: str, src_img: str)-> str:
         return {"error" :e}
 
 
-
-@app.exception_handler(Exception)
-async def generic_exception_handler(request, exc):
-    
-    return JSONResponse(
-        status_code=500,
-        content={"detail":"Internal server error", "exception": exc}
-    )
-
+@app.middleware("http")
+async def catch_exceptions(request, call_next):
+    try:
+        
+        return await call_next(request)
+    except Exception as e:
+        time_str = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+        is_id = False
+        idx = 0
+        for i in range(len(request.headers.raw)):
+            if request.headers.raw[i][0] == b'id':
+                idx = i
+                is_id = True
+                break
+        if is_id:
+            requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
+            data=f"ProcessError id:{request.headers.raw[i][1].decode('utf-8')} - date:{time_str}😀🔥🔥🔥\ndetail: {e}".encode(encoding='utf-8'))
+        else:
+            requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
+            data=f"ProcessError id: Unknown - date:{time_str} 😀🔥🔥🔥\ndetail: {e}".encode(encoding='utf-8'))
+        raise e
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=9001)
+
+

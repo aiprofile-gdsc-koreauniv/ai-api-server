@@ -4,7 +4,7 @@ from config import LOG_PATH
 
 # @@ Logging ############################
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 handler = logging.FileHandler(LOG_PATH, mode="a")
 handler.setFormatter(formatter)
