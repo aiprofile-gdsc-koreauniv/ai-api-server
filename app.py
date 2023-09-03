@@ -48,11 +48,6 @@ async def checkStatus():
 @app.patch("/api/url", tags=["Config"])
 async def update_url(item: UpdateUrlParam):
     global WEBUI_URL
-    if item.k != CONFIG_KEY:
-        return JSONResponse(
-            status_code=500,
-            content={"status": "401", "detail": "Unauthorized"}
-        )
     new_url = item.url
     config.WEBUI_URL = new_url
     WEBUI_URL = new_url
@@ -77,7 +72,6 @@ async def getBuildFaceModel(item: ProcessRequestParam)-> ProcessResponse:
             status_code=500,
             content={"status": "500", "webui_status": "Not Connected"}
         )
-        # raise Exception({"status": "500", "webui_status": "Not Connected"})
     
     start_time = time.time()
     
@@ -130,8 +124,8 @@ async def getBuildFaceModel(item: ProcessRequestParam)-> ProcessResponse:
     logger.info(f"Total time: {execution_time:.2f} seconds")
     logger.info(f"*********************")
     time_str = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
-    requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
-        data=f"ProcessDone id:{item.id} - date:{time_str}😀😀😀".encode(encoding='utf-8'))
+    requests.post("https://ntfy.sh/horangstudio-approval",
+        data=f"생성 완료! id:{item.id}😀\ndate:{time_str}".encode(encoding='utf-8'))
     return {"id": item.id, "image_paths" : result_urls}
 
 
@@ -194,6 +188,10 @@ async def buildFaceModel(req_id:str, img_list: List[Image.Image]) -> str | None:
     except Exception as e:
         logger.error(f"Error - build_face - req_id: {req_id} - detail: {e}")
         return
+    except:
+        requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
+            data=f"ProcessError id: {req_id} 🔥\ndetail: build-face".encode(encoding='utf-8'))
+        return
 
 
 async def swapFaceApi(req_id: str, face_model: str, src_img: Image.Image)-> str:
@@ -243,6 +241,10 @@ async def swapFaceApi(req_id: str, face_model: str, src_img: Image.Image)-> str:
     except Exception as e:
         logger.error(f"Error - swap_face - req_id: {req_id} - detail: {e}")
         return {"error" :e}
+    except:
+        requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
+            data=f"ProcessError id: {req_id} 🔥\ndetail: swap-face".encode(encoding='utf-8'))
+        return
 
 
 @app.middleware("http")
@@ -261,11 +263,26 @@ async def catch_exceptions(request, call_next):
                 break
         if is_id:
             requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
-            data=f"ProcessError id:{request.headers.raw[i][1].decode('utf-8')} - date:{time_str}😀🔥🔥🔥\ndetail: {e}".encode(encoding='utf-8'))
+            data=f"ProcessError id:{request.headers.raw[i][1].decode('utf-8')} - date:{time_str}🔥🔥\ndetail: {e}".encode(encoding='utf-8'))
         else:
             requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
-            data=f"ProcessError id: Unknown - date:{time_str} 😀🔥🔥🔥\ndetail: {e}".encode(encoding='utf-8'))
-        raise e
+            data=f"ProcessError id: Unknown - date:{time_str} 🔥🔥\ndetail: {e}".encode(encoding='utf-8'))
+    except:
+        time_str = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+        is_id = False
+        idx = 0
+        for i in range(len(request.headers.raw)):
+            if request.headers.raw[i][0] == b'id':
+                idx = i
+                is_id = True
+                break
+        if is_id:
+            requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
+            data=f"ProcessError id:{request.headers.raw[i][1].decode('utf-8')} - date:{time_str}🔥🔥\ndetail: Unknown".encode(encoding='utf-8'))
+        else:
+            requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
+            data=f"ProcessError id:{request.headers.raw[i][1].decode('utf-8')}  - date:{time_str} 🔥🔥\ndetail: {e}".encode(encoding='utf-8'))
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=9001)

@@ -14,7 +14,7 @@ FORMAT_DATE = current_date.strftime("%Y-%m-%d")
 # @@ Config ############################
 WEBUI_URL = os.environ.get('WEBUI_URL')
 API_BASE_URL = os.environ.get('API_BASE_URL')
-TIMEOUT_SEC = int(os.environ.get('TIMEOUT_SEC'))
+TIMEOUT_SEC = 240
 LOG_PATH = os.environ.get('LOG_PATH')
 PRESET_DIR = os.environ.get('PRESET_DIR')
 BUCKET_PREFIX = os.environ.get('BUCKET_PREFIX') + "/" +FORMAT_DATE
@@ -27,7 +27,7 @@ MASK_PATH = os.environ.get('MASK_PATH')
 FRAME_PATH = "frame"
 ROUND_MASK_PATH="frame/round_mask.png"
 MASK_PATH="frame/mask.png"
-BATCH_NO=3
+BATCH_NO=2
 HOST_NAME = socket.gethostname() + "-" + os.getcwd()
 
 
