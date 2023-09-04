@@ -78,7 +78,7 @@ async def requestPostAsync(url, payload):
             return (False, e)
 
 
-def loadPresetImages(is_male: bool, is_black: bool, univ: str, cnt:int ) -> List[Image.Image]:
+def loadPresetImages(is_male: bool, is_black: bool, univ: str, cnt:int, is_blonde=False ) -> List[Image.Image]:
     target_dir = PRESET_DIR  # 해당 폴더 경로로 바꿔주세요
     target_dir_white = PRESET_DIR
     
@@ -95,7 +95,10 @@ def loadPresetImages(is_male: bool, is_black: bool, univ: str, cnt:int ) -> List
         target_dir =os.path.join(target_dir, "woman")
         target_dir_white =os.path.join(target_dir, "woman")
     
-    if is_black:
+    if is_blonde:
+        target_dir =os.path.join(target_dir, "blonde")
+        target_dir_white =os.path.join(target_dir, "blonde")
+    elif is_black:
         target_dir =os.path.join(target_dir, "black")
         target_dir_white =os.path.join(target_dir, "black")
     else:

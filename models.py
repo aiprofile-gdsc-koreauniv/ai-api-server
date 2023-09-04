@@ -50,6 +50,7 @@ class DownloadImgParam(BaseModel):
 class APIPresetParam(BaseModel):
     is_male: bool
     is_black: bool
+    is_blonde: bool
 
 
 class UpdateUrlParam(BaseModel):

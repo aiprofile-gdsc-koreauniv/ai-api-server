@@ -89,7 +89,7 @@ async def getBuildFaceModel(item: ProcessRequestParam)-> ProcessResponse:
     start_time_swap = time.time()
     for idx in range(BATCH_NO):
         # Get Preset
-        preset_img_list = utils.loadPresetImages(is_male=item.param.is_male, is_black=item.param.is_black, univ="korea", cnt=2) + utils.loadPresetImages(is_male=item.param.is_male, is_black=item.param.is_black, univ="yonsei", cnt=1)
+        preset_img_list = utils.loadPresetImages(is_male=item.param.is_male, is_black=item.param.is_black, univ="korea", cnt=2, is_blonde=item.param.is_blonde) + utils.loadPresetImages(is_male=item.param.is_male, is_black=item.param.is_black, univ="yonsei", cnt=1, is_blonde=item.param.is_blonde)
         # korea-0
         portrait_img_str = await swapFaceApi(req_id=item.id, face_model=face_model, src_img=preset_img_list.pop(0))
         result_img = utils.merge_frame(image=utils.decodeBase642Img(portrait_img_str), frame=utils.getFrame(0, "red"), frame_number=0)
@@ -124,7 +124,7 @@ async def getBuildFaceModel(item: ProcessRequestParam)-> ProcessResponse:
     logger.info(f"Total time: {execution_time:.2f} seconds")
     logger.info(f"*********************")
     time_str = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
-    requests.post("https://ntfy.sh/horangstudio-approval",
+    requests.post("https://ntfy.sh/horangstudio-engine",
         data=f"생성 완료! id:{item.id}😀\ndate:{time_str}".encode(encoding='utf-8'))
     return {"id": item.id, "image_paths" : result_urls}
 
@@ -189,7 +189,7 @@ async def buildFaceModel(req_id:str, img_list: List[Image.Image]) -> str | None:
         logger.error(f"Error - build_face - req_id: {req_id} - detail: {e}")
         return
     except:
-        requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
+        requests.post("https://ntfy.sh/horangstudio-engine",
             data=f"ProcessError id: {req_id} 🔥\ndetail: build-face".encode(encoding='utf-8'))
         return
 
@@ -210,7 +210,7 @@ async def swapFaceApi(req_id: str, face_model: str, src_img: Image.Image)-> str:
                     "swapping_options": {
                         "face_restorer_name": "CodeFormer",
                         "upscaler_name": "R-ESRGAN 4x+",
-                        "improved_mask": True,
+                        "improved_mask": False,
                         "sharpen": False
                     }
                 }
@@ -242,7 +242,7 @@ async def swapFaceApi(req_id: str, face_model: str, src_img: Image.Image)-> str:
         logger.error(f"Error - swap_face - req_id: {req_id} - detail: {e}")
         return {"error" :e}
     except:
-        requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
+        requests.post("https://ntfy.sh/horangstudio-engine",
             data=f"ProcessError id: {req_id} 🔥\ndetail: swap-face".encode(encoding='utf-8'))
         return
 
@@ -262,10 +262,10 @@ async def catch_exceptions(request, call_next):
                 is_id = True
                 break
         if is_id:
-            requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
+            requests.post("https://ntfy.sh/horangstudio-engine",
             data=f"ProcessError id:{request.headers.raw[i][1].decode('utf-8')} - date:{time_str}🔥🔥\ndetail: {e}".encode(encoding='utf-8'))
         else:
-            requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
+            requests.post("https://ntfy.sh/horangstudio-engine",
             data=f"ProcessError id: Unknown - date:{time_str} 🔥🔥\ndetail: {e}".encode(encoding='utf-8'))
     except:
         time_str = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
@@ -277,10 +277,10 @@ async def catch_exceptions(request, call_next):
                 is_id = True
                 break
         if is_id:
-            requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
+            requests.post("https://ntfy.sh/horangstudio-engine",
             data=f"ProcessError id:{request.headers.raw[i][1].decode('utf-8')} - date:{time_str}🔥🔥\ndetail: Unknown".encode(encoding='utf-8'))
         else:
-            requests.post("https://ntfy.sh/kyumin_horangstudio-ai",
+            requests.post("https://ntfy.sh/horangstudio-engine",
             data=f"ProcessError id:{request.headers.raw[i][1].decode('utf-8')}  - date:{time_str} 🔥🔥\ndetail: {e}".encode(encoding='utf-8'))
 
 
