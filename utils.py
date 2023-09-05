@@ -107,10 +107,10 @@ def loadPresetImages(is_male: bool, is_black: bool, univ: str, cnt:int, is_blond
     
     if univ == "korea":
         target_dir =os.path.join(target_dir, "red")
-        target_dir_white =os.path.join(target_dir, "red")
+        target_dir_white =os.path.join(target_dir, "white")
     elif univ == "yonsei":
         target_dir =os.path.join(target_dir, "blue")
-        target_dir_white =os.path.join(target_dir, "blue")
+        target_dir_white =os.path.join(target_dir, "white")
     else:
         logger.error(f"Error - load_image - InvalidUnivIdx: {univ}")
         raise HTTPException(status_code=400, detail={"message":"Invalid Univ", "idx":univ})
@@ -190,7 +190,7 @@ def merge_frame(image=None, frame=None,
     else: ...
 
     ## Resize image to (1040, 1428)
-    image_cropped = image.resize((1040, 1428), Image.LANCZOS)
+    image_cropped = image.resize((1040, 1428), Image.LANCZOS).crop((0,0,1040,1428))
     sample_masked = Image.new("RGBA", image_cropped.size, (255, 255, 255, 0))  # 빈 이미지 생성 (투명 배경)
     sample_masked.paste(image_cropped, (0, 0), mask=mask)
 
