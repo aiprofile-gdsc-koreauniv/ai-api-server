@@ -91,7 +91,7 @@ async def getBuildFaceModel(item: ProcessRequestParam)-> ProcessResponse:
         # Get Preset
         preset_img_list = utils.loadPresetImages(is_male=item.param.is_male, is_black=item.param.is_black, univ="korea", cnt=2, is_blonde=item.param.is_blonde) + utils.loadPresetImages(is_male=item.param.is_male, is_black=item.param.is_black, univ="yonsei", cnt=1, is_blonde=item.param.is_blonde)
         # korea-0
-        portrait_img_str = await swapFaceApi(req_id=item.id, face_model=face_model, src_img=preset_img_list.pop(0))
+        portrait_img_str = await swapFaceApi(req_id=item.id, face_model=face_model, src_img=preset_img_list.pop(0), is_male=item.param.is_male)
         result_img = utils.merge_frame(image=utils.decodeBase642Img(portrait_img_str), frame=utils.getFrame(0, "red"), frame_number=0)
         file_url = cloud_utils.upload_image_to_gcs(result_img, f"{item.id}/{idx}-0.png")
         result_urls.append(file_url)
@@ -100,14 +100,14 @@ async def getBuildFaceModel(item: ProcessRequestParam)-> ProcessResponse:
         # korea - random set
         frame_idx = random.choice([1, 2, 3, 4])
         
-        portrait_img_str = await swapFaceApi(req_id=item.id, face_model=face_model, src_img=preset_img_list.pop(0))
+        portrait_img_str = await swapFaceApi(req_id=item.id, face_model=face_model, src_img=preset_img_list.pop(0), is_male=item.param.is_male)
         result_img = utils.merge_frame(image=utils.decodeBase642Img(portrait_img_str), frame=utils.getFrame(frame_idx, "red"), frame_number=frame_idx)
         file_url = cloud_utils.upload_image_to_gcs(result_img, f"{item.id}/{idx}-1.png")
         logger.info(f"{(idx*3)+2}/{BATCH_NO*3} Done!")
         result_urls.append(file_url)
         
         # yonsei - random set
-        portrait_img_str = await swapFaceApi(req_id=item.id, face_model=face_model, src_img=preset_img_list.pop(0))
+        portrait_img_str = await swapFaceApi(req_id=item.id, face_model=face_model, src_img=preset_img_list.pop(0), is_male=item.param.is_male)
         result_img = utils.merge_frame(image=utils.decodeBase642Img(portrait_img_str), frame=utils.getFrame(frame_idx, "blue"), frame_number=frame_idx)
         file_url = cloud_utils.upload_image_to_gcs(result_img, f"{item.id}/{idx}-2.png")
         logger.info(f"{(idx*3)+3}/{BATCH_NO*3} Done!")
@@ -194,8 +194,12 @@ async def buildFaceModel(req_id:str, img_list: List[Image.Image]) -> str | None:
         return
 
 
-async def swapFaceApi(req_id: str, face_model: str, src_img: Image.Image)-> str:
+async def swapFaceApi(req_id: str, face_model: str, src_img: Image.Image, is_male: bool)-> str:
     try:
+        if is_male: 
+            gender = "man"
+        else:
+            gender = "woman"
         face_swap_url = WEBUI_URL + "/faceswaplab/swap_face"
         src_img_base64 = utils.encodeImg2Base64(src_img)
         swap_api_payload = dict({
@@ -203,7 +207,7 @@ async def swapFaceApi(req_id: str, face_model: str, src_img: Image.Image)-> str:
         "units": [
                 {
                     "source_face": face_model,
-                    "same_gender": True,
+                    "same_gender": False,
                     "faces_index": [
                         0
                     ],
@@ -222,7 +226,7 @@ async def swapFaceApi(req_id: str, face_model: str, src_img: Image.Image)-> str:
                 "inpainting_when": "After All",
                     "inpainting_options": {
                         "inpainting_denoising_strengh": 0.2,
-                        "inpainting_prompt": "Portrait of a [gender]",
+                        "inpainting_prompt": f"Portrait of a {gender}",
                         "inpainting_negative_prompt":"blurry",
                         "inpainting_steps": 20,
                         "inpainting_sampler": "DPM++ 2M SDE Karras",
