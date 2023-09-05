@@ -27,7 +27,7 @@ MASK_PATH = os.environ.get('MASK_PATH')
 FRAME_PATH = "frame"
 ROUND_MASK_PATH="frame/round_mask.png"
 MASK_PATH="frame/mask.png"
-BATCH_NO=2
+BATCH_NO=int(os.environ.get('BATCH_NO'))
 HOST_NAME = socket.gethostname() + "-" + os.getcwd()
 
 
