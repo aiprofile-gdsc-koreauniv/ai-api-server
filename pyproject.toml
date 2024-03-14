@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "ai-api-server"
+version = "0.1.0"
+description = "AI-API-Server for GDSC-KU AI-Profile project"
+authors = [
+    "KY00KIM <dev.kyoomin@gmail.com>",
+]
+readme = "README.md"
+
+[tool.poetry.scripts]
+start  = "ai_api_server.main:run_prod"
+startd = "ai_api_server.main:run_dev"
+
+[tool.poetry.dependencies]
+python               = "^3.10"
+uvicorn              = "0.23.2"
+fastapi              = "0.94.0"
+google-cloud-storage = "2.10.0"
+python-dotenv        = "1.0.0"
+pillow               = "9.5.0"
+httpx                = "0.24.1"
+
+
+[build-system]
+requires = [
+    "poetry-core",
+]
+build-backend = "poetry.core.masonry.api"
