@@ -21,7 +21,7 @@ class FaceDetector:
     def detect(self, image_paths, imgsz=640, max_det=1):
         """
         Args:
-            image_paths (List[str]): A List of images for detecting.
+            image_paths (List[numpy.ndarray]): A List of images for detecting.
             imgsz (int, optional): Resizing size. Defaults to 640.
             max_det (int, optional): Maximum # of detections per image. Defaults to 1.
 
