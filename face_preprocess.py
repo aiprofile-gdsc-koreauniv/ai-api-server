@@ -5,7 +5,7 @@ from PIL import Image
 from ultralytics import YOLO
 import head_segmentation.segmentation_pipeline as seg_pipeline
 
-class FaceDetector:
+class FaceDetector:    
     def __init__(self, model_path):
         self.model = YOLO(model_path, task='detect')
         self.warmup_model(imgsz=640)  
@@ -19,6 +19,15 @@ class FaceDetector:
 
 
     def detect(self, image_paths, imgsz=640, max_det=1):
+        """
+        Args:
+            image_paths (List[str]): A List of images for detecting.
+            imgsz (int, optional): Resizing size. Defaults to 640.
+            max_det (int, optional): Maximum # of detections per image. Defaults to 1.
+
+        Returns:
+            Python generator of Results.
+        """
         self.original_image = image_paths
         self.results = self.model(self.original_image, 
                                   max_det=max_det, 
@@ -27,6 +36,13 @@ class FaceDetector:
         return self.results
 
     def crop_faces(self, margin):
+        """
+        Args:
+            margin (float): A margin value to add around the detected face bbox.
+
+        Returns:
+            List[numpy.ndarray]: A list of cropped images containing the detected faces.
+        """
         cropped_images = []
         for i, r in enumerate(self.results):
             for box in r.boxes.xyxy:
@@ -50,9 +66,16 @@ class HeadSegmenter:
     def __init__(self, device='cpu'):
         self.device = device
         self.segmentation_pipeline = seg_pipeline.HumanHeadSegmentationPipeline(device=device)
-        self.fill_color = [0x79, 0x00, 0x30]
+        self.fill_color = [0x79, 0x00, 0x30] # crimson
 
     def segment_and_color(self, images):
+        """
+        Args:
+            List[numpy.ndarray]: A list of (cropped) images.  
+
+        Returns:
+            List[PIL.Image.Image]
+        """
         segmented_images = []
         for image in images:
             segmented_image = self.segment_head(image)
@@ -65,9 +88,3 @@ class HeadSegmenter:
         segmentation_overlay[segmentation_map == 0] = self.fill_color
         result_image = np.where(segmentation_overlay == self.fill_color, segmentation_overlay, image)
         return result_image.astype('uint8')
-
-    def segment_only(self, images):
-        segmentation_map = self.segmentation_pipeline.predict(images)
-        segmented_region = images * cv2.cvtColor(segmentation_map, cv2.COLOR_GRAY2RGB)
-        pil_image = Image.fromarray(segmented_region)
-        return pil_image
