@@ -1,5 +1,9 @@
+import cv2
 import torch
+import numpy as np
+from PIL import Image
 from ultralytics import YOLO
+import head_segmentation.segmentation_pipeline as seg_pipeline
 
 class FaceDetector:
     def __init__(self, model_path):
@@ -41,3 +45,29 @@ class FaceDetector:
         new_x2 = min(image_width, x2 + margin * 0.2 * bbox_width) 
         new_y2 = min(image_height, y2 + margin * 0.2 * bbox_height) 
         return int(new_x1), int(new_y1), int(new_x2), int(new_y2)
+    
+class HeadSegmenter:
+    def __init__(self, device='cpu'):
+        self.device = device
+        self.segmentation_pipeline = seg_pipeline.HumanHeadSegmentationPipeline(device=device)
+        self.fill_color = [0x79, 0x00, 0x30]
+
+    def segment_and_color(self, images):
+        segmented_images = []
+        for image in images:
+            segmented_image = self.segment_head(image)
+            segmented_images.append(Image.fromarray(segmented_image))
+        return segmented_images
+
+    def segment_head(self, image):
+        segmentation_map = self.segmentation_pipeline.predict(image)
+        segmentation_overlay = cv2.cvtColor(segmentation_map, cv2.COLOR_GRAY2RGB)
+        segmentation_overlay[segmentation_map == 0] = self.fill_color
+        result_image = np.where(segmentation_overlay == self.fill_color, segmentation_overlay, image)
+        return result_image.astype('uint8')
+
+    def segment_only(self, images):
+        segmentation_map = self.segmentation_pipeline.predict(images)
+        segmented_region = images * cv2.cvtColor(segmentation_map, cv2.COLOR_GRAY2RGB)
+        pil_image = Image.fromarray(segmented_region)
+        return pil_image
