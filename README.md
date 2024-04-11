@@ -6,6 +6,16 @@
 docker build -f dev.dockerfile -t ai-apiserver:dev .
 docker compose up -d
 ```
+```bash
+# docker-compose management
+docker compose ps       # status
+docker compose logs -f  # Logs
+docker compose down     # Delete
+```
+
+## 0. Requirements
+- Built to run on `NVIDIA GPU` environment.
+   - `cuda-container-toolkit` required.
 
 ## 1. Build & Run
 
