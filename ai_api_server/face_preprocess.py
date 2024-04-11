@@ -1,3 +1,4 @@
+from typing import List
 import cv2
 import torch
 import numpy as np
@@ -18,7 +19,7 @@ class FaceDetector:
         self.model.predict(dummy_img, task='detect')
 
 
-    def detect(self, image_paths, imgsz=640, max_det=1):
+    def detect(self, images, imgsz=640, max_det=1):
         """
         Args:
             image_paths (List[numpy.ndarray]): A List of images for detecting.
@@ -28,7 +29,7 @@ class FaceDetector:
         Returns:
             Python generator of Results.
         """
-        self.original_image = image_paths
+        self.original_image = images
         self.results = self.model(self.original_image, 
                                   max_det=max_det, 
                                   imgsz=imgsz,)
@@ -60,7 +61,7 @@ class FaceDetector:
         new_x2 = min(image_width, x2 + margin * 0.2 * bbox_width) 
         new_y2 = min(image_height, y2 + margin * 0.2 * bbox_height) 
         return int(new_x1), int(new_y1), int(new_x2), int(new_y2)
-    
+
 class HeadSegmenter:
     def __init__(self, device='cpu'):
         self.device = device
@@ -101,28 +102,20 @@ def align_pil_image(img: Image.Image)->Image.Image:
                 img = img.transpose(Image.ROTATE_90)
     return img
 
-if __name__ == "__main__":
-    import time
-    face_detector = FaceDetector('yolov8n-face.onnx')
-    head_segmenter = HeadSegmenter('cuda')
-    img = align_pil_image(Image.open('test.jpg'))
+def preprocess_image(images: List[Image.Image], face_detector: FaceDetector, head_segmenter: HeadSegmenter) -> List[Image.Image]:
+    """
 
-    start = time.time()
-    yolo_res = face_detector.detect([np.array(img)])
-    d_time = time.time()
-    crop_res = face_detector.crop_faces(margin=0.5)
-    c_time = time.time()
-    seg_res = head_segmenter.segment_and_color(crop_res)
-    s_time = time.time()
-    print("------------------------------------")
-    print(f"Total Time: {s_time - start}")
-    print("------------------------------------")
-    print(f"Detection Time: {d_time - start}")
-    print("------------------------------------")
-    print(f"Cropping Time: {c_time - d_time}")
-    print("------------------------------------")
-    print(f"Segmentation Time: {s_time - c_time}")
-    print("------------------------------------")
-    Image.fromarray(crop_res[0]).save('cropped_face.jpg')
-    seg_res[0].save('segmented_face.jpg')
-    print(yolo_res)
+    Args:
+        images (List[Image.Image]): A list of PIL.Image.Image.
+        face_detector (FaceDetector): 
+        head_segmenter (HeadSegmenter): 
+
+    Returns:
+        preprcessed_images (List[Image.Image]): A list of PIL.Image.Image.
+    """
+    # TODO : Implement
+    return images
+
+face_detector: FaceDetector = None
+head_segmenter: HeadSegmenter = None
+

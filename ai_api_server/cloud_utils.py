@@ -33,10 +33,8 @@ def upload_image_to_gcs(images: List[Image.Image], dest_file_names: List[str]) -
 
             # Upload the bytes to GCS
             blob.upload_from_file(image_bytes, content_type="image/png")
-        print("Done")
         return True
     except Exception as e:
-        print("ee", e)
         logger.error(f"Error-upload_gcs:{BUCKET_PREFIX}/{dest_file_names}::detail:{e}")
         return False
 
@@ -71,3 +69,14 @@ def download_image_from_gcs(source_img_paths: List[str]) -> tuple[bool, List[Ima
         logger.error(f"Error-download_gcs:{source_img_paths}::detail:{e}")
         return False, None
 
+
+def download_face_model():
+    if os.path.exists("yolov8n-face.onnx"):
+        return
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(BUCKET_NAME)
+    blob = bucket.blob("models/yolov8n-face.onnx")
+
+    model_bytes = blob.download_as_bytes()
+    
+    open("yolov8n-face.onnx", "wb").write(model_bytes)
