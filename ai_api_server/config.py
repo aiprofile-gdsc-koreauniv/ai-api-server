@@ -29,6 +29,9 @@ ROUND_MASK_PATH="frame/round_mask.png"
 MASK_PATH="frame/mask.png"
 BATCH_NO=int(os.environ.get('BATCH_NO'))
 HOST_NAME = socket.gethostname() + "-" + os.getcwd()
+RMQ_HOST = os.environ.get('RMQ_HOST')
+RMQ_PORT = int(os.environ.get('RMQ_PORT'))
+RMQ_QUEUE = os.environ.get('RMQ_QUEUE')
 
 
 if not os.path.exists(PRESET_DIR):
