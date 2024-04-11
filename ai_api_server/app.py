@@ -8,12 +8,12 @@ import base64
 import time
 from typing import List
 from PIL import Image
-from logger import logger
-import utils
-import cloud_utils
-from models import FaceListPayload, FaceSwapPayload, PresetParam, UploadImgParam, DownloadImgParam, ProcessRequestParam, UpdateUrlParam, AuthorizedParam, ProcessResponse
-from config import WEBUI_URL, CONFIG_KEY, HOST_NAME, BATCH_NO
-import config
+from ai_api_server.logger import logger
+import ai_api_server.utils as utils
+import ai_api_server.cloud_utils as cloud_utils
+from ai_api_server.models import FaceListPayload, FaceSwapPayload, PresetParam, UploadImgParam, DownloadImgParam, ProcessRequestParam, UpdateUrlParam, AuthorizedParam, ProcessResponse
+from ai_api_server.config import WEBUI_URL, CONFIG_KEY, HOST_NAME, BATCH_NO
+import ai_api_server.config as config
 import requests
 import random
 
@@ -287,6 +287,10 @@ async def catch_exceptions(request, call_next):
             requests.post("https://ntfy.sh/horangstudio-engine",
             data=f"ProcessError id:{request.headers.raw[i][1].decode('utf-8')}  - date:{time_str} 🔥🔥\ndetail: {e}".encode(encoding='utf-8'))
 
+def run():
+    import os 
+    port = int(os.getenv("PORT", "9001"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=9001)

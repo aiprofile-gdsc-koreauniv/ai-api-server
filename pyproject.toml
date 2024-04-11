@@ -8,8 +8,7 @@ authors = [
 readme = "README.md"
 
 [tool.poetry.scripts]
-start  = "ai_api_server.main:run_prod"
-startd = "ai_api_server.main:run_dev"
+start  = "ai_api_server.app:run"
 
 [tool.poetry.dependencies]
 python               = "^3.10"

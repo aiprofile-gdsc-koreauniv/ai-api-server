@@ -4,8 +4,8 @@ from PIL import Image
 from typing import List
 import httpx
 import base64
-from logger import logger
-from config import TIMEOUT_SEC, PRESET_DIR, ROUND_MASK_PATH, MASK_PATH, FRAME_PATH
+from ai_api_server.logger import logger
+from ai_api_server.config import TIMEOUT_SEC, PRESET_DIR, ROUND_MASK_PATH, MASK_PATH, FRAME_PATH
 import random
 from fastapi import HTTPException
 
