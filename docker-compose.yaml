@@ -1,0 +1,115 @@
+version: '3.8'
+services:
+  api-server1:
+    image: ai-api-server:dev
+    ports:
+      - "9001:9001"
+    environment:
+      - WEBUI_URL=http://webui1:7860
+    depends_on:
+      - webui1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/api/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            capabilities: [gpu]
+            count: all
+
+  webui1:
+    image: kyookim/ai-diffusion:dev0.3
+    ports:
+      - "7861:7860"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/user"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            capabilities: [gpu]
+            count: all
+
+  api-server2:
+    image: ai-api-server:dev
+    ports:
+      - "9002:9001"
+    environment:
+      - WEBUI_URL=http://webui2:7860
+    depends_on:
+      - webui2
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/api/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            capabilities: [gpu]
+            count: all
+
+  webui2:
+    image: kyookim/ai-diffusion:dev0.3
+    ports:
+      - "7862:7860"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/user"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            capabilities: [gpu]
+            count: all
+
+  # api-server3:
+  #   image: ai-api-server:dev
+  #   ports:
+  #     - "9003:9001"
+  #   environment:
+  #     - WEBUI_URL=http://webui3:7860
+  #   depends_on:
+  #     - webui3
+  #     healthcheck:
+  #       test: ["CMD", "curl", "-f", "http://localhost:9001/api/health"]
+  #       interval: 60s
+  #       timeout: 10s
+  #       retries: 3
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #         - driver: nvidia
+  #           capabilities: [gpu]
+  #           count: all
+
+  # webui3:
+  #   image: kyookim/ai-diffusion:dev0.3
+  #   ports:
+  #     - "7863:7860"
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:7860/user"]
+  #     interval: 60s
+  #     timeout: 10s
+  #     retries: 3
+  #     deploy:
+  #       resources:
+  #         reservations:
+  #           devices:
+  #           - driver: nvidia
+  #             capabilities: [gpu]
+  #             count: all

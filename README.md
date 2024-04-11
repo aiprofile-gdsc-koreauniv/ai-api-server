@@ -1,8 +1,13 @@
 # ai-api-server
 
+## TL;DR
+```bash
+# Configure .env, GCP credential
+docker build -f dev.dockerfile -t ai-apiserver:dev .
+docker compose up -d
+```
+
 ## 1. Build & Run
-
-
 
 1. 해당 레포지토리를 클론합니다.
 
