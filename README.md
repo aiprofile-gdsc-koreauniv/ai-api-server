@@ -11,20 +11,19 @@
    ```
 2. Crendential을 작업폴더에 넣습니다.
    - GCP Credential과 현재 폴더에 위치합니다.
-
+   - .env 파일 또는 환경변수를 설정합니다.
 
 3. Docker 이미지 빌드
    ```bash
-   docker build -t MY_CONTAINER_NAME .
+   docker build -t MY_CONTAINER_NAME -f dev.dockerfile .
    ```
 
 4. Docker 실행
    ```bash
    docker run -d \
       -p 9001:9001 \
-      -v $PWD:/app \
+      -p 5672:5672 \
       -e ENV_VAR1=VALUE1 \
-      -e ENV_VAR2=VALUE2 \
       MY_CONTAINER_NAME
    ```
 
