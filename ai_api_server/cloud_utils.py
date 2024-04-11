@@ -10,6 +10,15 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "test.json"
 
 
 def upload_image_to_gcs(images: List[Image.Image], dest_file_names: List[str]) -> bool:
+    """ Upload to GCS
+
+    Args:
+        images (List[Image.Image]): PIL.Image
+        dest_file_names (List[str]): dir_name WITHOUT date i.e. "my_dir/1.png"
+
+    Returns:
+        bool: _description_
+    """
     try:
         storage_client = storage.Client()
         # bucket = storage_client.bucket(BUCKET_NAME)
@@ -34,6 +43,14 @@ def upload_image_to_gcs(images: List[Image.Image], dest_file_names: List[str]) -
 
 
 def download_image_from_gcs(source_img_paths: List[str]) -> tuple[bool, List[Image.Image]| None]:
+    """ Download from GCS
+    
+    Args:
+        source_img_paths (List[str]): Bucket dir path, WITHOUT bucketname, e.g. "my_dir/1.png"
+
+    Returns:
+        tuple[bool, List[Image.Image]| None]: _description_
+    """
     try:
         storage_client = storage.Client()
         bucket = storage_client.bucket(BUCKET_NAME)
