@@ -30,7 +30,7 @@ def convertStrList2Img(img_str_list: List[str]) -> List[Image.Image]:
     return res
 
 
-async def simpleRequestGetAsync(url):
+async def checkSuccessGetAsync(url):
     async with httpx.AsyncClient() as client:
         try:
             # Send async GET request to the external API
@@ -61,7 +61,7 @@ async def requestGetAsync(url):
 
 
 async def requestPostAsync(url, payload):
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(verify=False) as client:
         try:
             # Send async POST request to the external API
             response = await client.post(url, json=payload, timeout=httpx.Timeout(TIMEOUT_SEC))
