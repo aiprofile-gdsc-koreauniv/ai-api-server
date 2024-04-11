@@ -2,8 +2,8 @@ import os
 import io
 from typing import List
 from PIL import Image
-from ai_api_server.logger import logger
-from ai_api_server.config import BUCKET_PREFIX, BUCKET_NAME, FORMAT_DATE, GCP_CREDENTIAL, GCS_URL_PREFIX
+from logger import logger
+from config import BUCKET_PREFIX, BUCKET_NAME, FORMAT_DATE, GCP_CREDENTIAL, GCS_URL_PREFIX
 from google.cloud import storage
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIAL

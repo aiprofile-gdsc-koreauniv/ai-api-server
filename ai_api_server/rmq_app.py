@@ -4,8 +4,8 @@ import json
 from datetime import datetime
 
 from aiormq import DeliveryError
-from ai_api_server.logger import logger
-from ai_api_server.config import RMQ_HOST, RMQ_PORT, RMQ_QUEUE
+from logger import logger
+from config import RMQ_HOST, RMQ_PORT, RMQ_QUEUE
 CONCUR_LIMIT = 1
 
 async def process_message(

@@ -4,8 +4,8 @@ from PIL import Image
 from typing import List
 import httpx
 import base64
-from ai_api_server.logger import logger
-from ai_api_server.config import TIMEOUT_SEC, PRESET_DIR, ROUND_MASK_PATH, MASK_PATH, FRAME_PATH
+from logger import logger
+from config import TIMEOUT_SEC, PRESET_DIR, ROUND_MASK_PATH, MASK_PATH, FRAME_PATH
 import random
 from fastapi import HTTPException
 
@@ -40,7 +40,7 @@ async def checkSuccessGetAsync(url):
             if response.status_code // 100 == 2:
                 return True
         except httpx.RequestError as e:
-            logger.error(f"Error - simple_req - url: {url}")
+            logger.error(f"Error - simple_req - url: {url} - detail: {e}")
         return False
 
 

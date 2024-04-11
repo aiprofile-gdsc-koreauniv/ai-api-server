@@ -1,13 +1,10 @@
 import asyncio
 from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 import torch
-from ai_api_server.cloud_utils import download_face_model
-from ai_api_server.face_preprocess import HeadSegmenter, FaceDetector, face_detector, head_segmenter
-
-from ai_api_server.rmq_app import setup_queue
-from face_preprocess import FaceDetector
+from cloud_utils import download_face_model
+from face_preprocess import HeadSegmenter, FaceDetector, face_detector, head_segmenter
+from rmq_app import setup_queue
 
 async def on_startup(loop):
     # TODO: Preprocess Model Load
@@ -15,7 +12,7 @@ async def on_startup(loop):
     download_face_model()
     face_detector = FaceDetector('yolov8n-face.onnx')
     head_segmenter = HeadSegmenter('cuda')
-    task = asyncio.create_task(setup_queue(loop))
+    # task = asyncio.create_task(setup_queue(loop))
 
 
 def on_shutdown():

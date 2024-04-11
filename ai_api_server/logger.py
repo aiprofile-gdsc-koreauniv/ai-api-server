@@ -1,5 +1,5 @@
 import logging 
-from ai_api_server.config import LOG_PATH
+from config import LOG_PATH
 
 
 # @@ Logging ############################

@@ -4,15 +4,15 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from datetime import datetime
-from ai_api_server.api import AlwaysOnScripts, ControlNetArgs, ReactorArgs, ScriptArgs, T2IArgs
-from ai_api_server.logger import logger
-from ai_api_server.setup import lifespan
-import ai_api_server.utils as utils
-import ai_api_server.cloud_utils as cloud_utils
-from ai_api_server.dto import BaseResponse, ProcessRequestParam, ProcessData, ProcessResponse, StatusData, StatusResponse, UpdateUrlParam
-from ai_api_server.config import BUCKET_PREFIX, WEBUI_URL
-import ai_api_server.config as config
-from ai_api_server.face_preprocess import head_segmenter, face_detector, preprocess_image
+from api import AlwaysOnScripts, ControlNetArgs, ReactorArgs, ScriptArgs, T2IArgs
+from logger import logger
+from setup import lifespan
+import utils as utils
+import cloud_utils as cloud_utils
+from dto import BaseResponse, ProcessRequestParam, ProcessData, ProcessResponse, StatusData, StatusResponse, UpdateUrlParam
+from config import BUCKET_PREFIX, WEBUI_URL
+import config as config
+from face_preprocess import head_segmenter, face_detector, preprocess_image
 
 app = FastAPI(
     title="AI-Profile-Diffusion-Server",
