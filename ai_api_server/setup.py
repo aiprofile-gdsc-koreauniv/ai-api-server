@@ -7,11 +7,11 @@ from face_preprocess import HeadSegmenter, FaceDetector, face_detector, head_seg
 from rmq_app import setup_queue
 
 async def on_startup(loop):
-    # TODO: Preprocess Model Load
     global face_detector, head_segmenter
     download_face_model()
     face_detector = FaceDetector('yolov8n-face.onnx')
     head_segmenter = HeadSegmenter('cuda')
+    # TODO: Integrate RabbitMQ 
     # task = asyncio.create_task(setup_queue(loop))
 
 

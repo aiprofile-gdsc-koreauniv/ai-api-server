@@ -10,3 +10,4 @@ handler = logging.FileHandler(LOG_PATH, mode="a")
 handler.setFormatter(formatter)
 logger = logging.getLogger(__name__)
 logger.addHandler(handler)
+# TODO: logger async 

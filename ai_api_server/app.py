@@ -59,6 +59,7 @@ async def checkStatus():
 async def process(req_payload: ProcessRequestParam):
     try:
         req_id = req_payload.id
+        # TODO: override webui params
         # TODO: preprocess
         #   O Download Images -> Select Pose? IP?
         #   X Detect, Seg Face
@@ -71,12 +72,12 @@ async def process(req_payload: ProcessRequestParam):
 
         processed_images =  preprocess_image(src_imgs, face_detector, head_segmenter)
 
-        # TODO: preprocess logic
+        # TODO: preprocess selection logic
         selected_img = processed_images[0]
         selected_img.save("selected_img.png")
         image_str = utils.encodeImg2Base64(selected_img)
-        
-        
+
+
         t2i_url = WEBUI_URL + "/sdapi/v1/txt2img"
         controlnet_args = ScriptArgs(args=[ControlNetArgs(image=image_str)])
         reactor_args = ScriptArgs(args=ReactorArgs(src_img=image_str, swap_in_generated_img=False).to_list())
@@ -96,7 +97,7 @@ async def process(req_payload: ProcessRequestParam):
         #   O Upload Image
         img_names = [f"{req_id}/{i}.png" for i in range(1,len(images)+1)]
         cloud_utils.upload_image_to_gcs(images, img_names)
-        
+
         return JSONResponse(
                 status_code=200,
                 content=ProcessResponse(message=f"Success created for ID:{req_id}", 
