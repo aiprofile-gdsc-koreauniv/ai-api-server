@@ -32,7 +32,6 @@ class FaceDetector:
         return results
 
     def crop_faces(self, results, image, margin):
-        print(type(results[0]), type(image[0]))
         """
         Args:
             results (List[ultralytics.engine.results.Results]): Results returned by "detect" method.
