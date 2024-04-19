@@ -1,9 +1,10 @@
 version: '3.8'
 services:
   api-server1:
-    image: ai-api-server:dev
+    image: kyookim/ai-profile-ai-api:dev
     ports:
       - "9001:9001"
+      - "8001:5672"
     environment:
       - WEBUI_URL=http://webui1:7860
     depends_on:
@@ -39,9 +40,10 @@ services:
             count: all
 
   api-server2:
-    image: ai-api-server:dev
+    image: kyookim/ai-profile-ai-api:dev
     ports:
       - "9002:9001"
+      - "8002:5672"
     environment:
       - WEBUI_URL=http://webui2:7860
     depends_on:
