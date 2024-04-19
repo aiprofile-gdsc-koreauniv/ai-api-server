@@ -1,3 +1,4 @@
+import datetime
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -79,6 +80,24 @@ class OverrideParam(BaseModel):
 
 class ProcessRequestParam(BaseModel):
     id: str
-    param: APIPresetParam
-    image_paths: List[str]
+    # param: APIPresetParam
+    email: str
+    userId: str
+    imagePaths: List[str]
+    requestedAt: str
+    title: str
     override_webui: Optional[OverrideParam]
+
+class ProcessResponseParam(BaseModel):
+    id: str
+    email: str
+    imagePaths: List[str]
+    requestedAt: str
+    createdAt: datetime.datetime
+    title: str
+    userId: str
+
+class ProcessErrorParam(BaseModel):
+    id: str
+    error: str
+    createdAt: datetime.datetime
