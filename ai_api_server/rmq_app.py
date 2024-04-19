@@ -4,8 +4,7 @@ import json
 import datetime
 from api import AlwaysOnScripts, ControlNetArgs, ReactorArgs, ScriptArgs, T2IArgs
 import cloud_utils
-from datetime import datetime
-
+from cloud_utils import db_client
 from face_preprocess import preprocess_image, head_segmenter, face_detector
 import utils
 from dto import ProcessErrorParam, ProcessRequestParam, ProcessResponseParam
@@ -61,32 +60,36 @@ async def process_message(
             img_names = [f"{req_id}/{i}.png" for i in range(1,len(images)+1)]
             cloud_utils.upload_image_to_gcs(images, img_names)
             
-        try:
-            time_str = datetime.now().strftime("%Y%m%d-%H:%M:%S") 
-            json_dict = json.loads(message.body)
-            
-            print(time_str, "header:", message.headers,"parsed:", json_dict)
-            
-            await asyncio.sleep(1)
-            if json_dict["msg"] == "q":
-                # @ TODO @@ Inner catch does not on occur outer exception
-                # @ TODO @@ Issue publish_message not working 
-                if message.headers["x-retry-count"] > 3:
-                    await message.reject(requeue=False)
-                else:
-                    message.headers["x-retry-count"] += 1
-                    await publish_message(message.channel, message.body, message.headers["x-retry-count"])
-                    await message.reject(requeue=False)
+            # DB
+            FORMAT_DATE = datetime.date.today().strftime("%Y-%m-%d")
+            response = ProcessResponseParam(id=req_id, 
+                                   email=req_payload.email, 
+                                   imagePaths=[ f"{BUCKET_PREFIX}/{FORMAT_DATE}/{img}" for img in img_names],
+                                   requestedAt=req_payload.requestedAt,
+                                   createdAt=datetime.datetime.now(),
+                                   title=req_payload.title,
+                                   userId=req_payload.userId)
+            await db_client.collection("profile_responses").document(req_id).set(response.dict())
             logger.info(f"Success:{req_id}")
 
         except Exception as e:
             await message.reject(requeue=False)
             if req_id is not None:
                 logger.error(f"Error:{req_payload.id}::detail:{e}")
+                response = ProcessErrorParam(id=req_payload.id, 
+                                            createdAt=datetime.datetime.now(),
+                                            error=str(e) if e is not None else "Unknown",)
+                await db_client.collection("profile_errors").document(req_id).set(response.dict())
+                await utils.requestPostAsyncData("https://ntfy.sh/horangstudio-engine",
+                    payload=f"ProcessException id: {req_payload.id} 🔥\ndetail: {e}".encode(encoding='utf-8'))
             else:
                 logger.error(f"Error:InvalidMsgFmt::detail:{message.body}")
+                await utils.requestPostAsyncData("https://ntfy.sh/horangstudio-engine",
+                    payload=f"ProcessException id: unknown 🔥\ndetail: {e}".encode(encoding='utf-8'))
         except:
             await message.reject(requeue=False)
+            await utils.requestPostAsyncData("https://ntfy.sh/horangstudio-engine",
+                payload=f"ProcessError id: {req_id} 🔥\ndetail: unknown".encode(encoding='utf-8'))
         # @ TODO @@ Inner catch does not on occur outer exception
         # @ TODO @@ Issue publish_message not working 
 

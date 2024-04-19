@@ -77,6 +77,23 @@ async def requestPostAsync(url, payload):
             logger.error("Error-"+"POST-" + "url:" + url + "-" +"detail:"+str(e))
             return (False, e)
 
+async def requestPostAsyncData(url, payload):
+    async with httpx.AsyncClient(verify=False) as client:
+        try:
+            # Send async POST request to the external API
+            response = await client.post(url, data=payload, timeout=httpx.Timeout(TIMEOUT_SEC))
+
+            # Check if the request was successful (status code 200)
+            if response.status_code // 100 == 2:
+                data = response.json()  # Parse JSON response
+                return (True, data)
+            else:
+                logger.error("Error-"+"POST-" + "url:" + url + "-" +"detail:"+str(response))
+                return (False, response.json())
+        except httpx.RequestError as e:
+            logger.error("Error-"+"POST-" + "url:" + url + "-" +"detail:"+str(e))
+            return (False, e)
+
 
 def loadPresetImages(is_male: bool, is_black: bool, univ: str, cnt:int, is_blonde=False ) -> List[Image.Image]:
     target_dir = PRESET_DIR  # 해당 폴더 경로로 바꿔주세요

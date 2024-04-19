@@ -23,6 +23,7 @@ head-segmentation = {git = "https://github.com/wiktorlazarski/head-segmentation.
 ultralytics = "^8.1.47"
 onnx = "^1.16.0"
 onnxruntime-gpu = "^1.17.1"
+firebase-admin = "^6.5.0"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -1,3 +1,4 @@
+import datetime
 import os
 import io
 from typing import List
@@ -5,9 +6,12 @@ from PIL import Image
 from logger import logger
 from config import BUCKET_PREFIX, BUCKET_NAME, FORMAT_DATE, GCP_CREDENTIAL, GCS_URL_PREFIX
 from google.cloud import storage
+import firebase_admin
+from firebase_admin import credentials, firestore_async
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIAL
-
+app = firebase_admin.initialize_app(credentials.Certificate(GCP_CREDENTIAL))
+db_client = firestore_async.client()
 
 def upload_image_to_gcs(images: List[Image.Image], dest_file_names: List[str]) -> bool:
     """ Upload to GCS
@@ -23,10 +27,10 @@ def upload_image_to_gcs(images: List[Image.Image], dest_file_names: List[str]) -
         storage_client = storage.Client()
         # bucket = storage_client.bucket(BUCKET_NAME)
         bucket = storage_client.bucket("2024-profile")
-        
+        FORMAT_DATE = datetime.date.today().strftime("%Y-%m-%d")
         for image, dest_file_name in zip(images, dest_file_names):
             # Convert the PIL Image to bytes
-            blob = bucket.blob(f"{BUCKET_PREFIX}/{dest_file_name}")
+            blob = bucket.blob(f"{BUCKET_PREFIX}/{FORMAT_DATE}/{dest_file_name}")
             image_bytes = io.BytesIO()
             image.save(image_bytes, format="PNG")
             image_bytes.seek(0)
@@ -35,7 +39,7 @@ def upload_image_to_gcs(images: List[Image.Image], dest_file_names: List[str]) -
             blob.upload_from_file(image_bytes, content_type="image/png")
         return True
     except Exception as e:
-        logger.error(f"Error-upload_gcs:{BUCKET_PREFIX}/{dest_file_names}::detail:{e}")
+        logger.error(f"Error-upload_gcs:{BUCKET_PREFIX}/{FORMAT_DATE}/{dest_file_names}::detail:{e}")
         return False
 
 
@@ -80,3 +84,7 @@ def download_face_model():
     model_bytes = blob.download_as_bytes()
     
     open("yolov8n-face.onnx", "wb").write(model_bytes)
+
+
+
+
