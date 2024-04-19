@@ -12,7 +12,7 @@ async def on_startup(loop):
     face_detector = FaceDetector('yolov8n-face.onnx')
     head_segmenter = HeadSegmenter('cuda')
     # TODO: Integrate RabbitMQ 
-    # task = asyncio.create_task(setup_queue(loop))
+    task = asyncio.create_task(setup_queue(loop))
 
 
 def on_shutdown():

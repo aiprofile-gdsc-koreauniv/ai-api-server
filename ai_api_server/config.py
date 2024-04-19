@@ -32,6 +32,8 @@ HOST_NAME = socket.gethostname() + "-" + os.getcwd()
 RMQ_HOST = os.environ.get('RMQ_HOST')
 RMQ_PORT = int(os.environ.get('RMQ_PORT'))
 RMQ_QUEUE = os.environ.get('RMQ_QUEUE')
+RMQ_USER = os.environ.get('RMQ_USER')
+RMQ_PWD = os.environ.get('RMQ_PWD')
 
 
 if not os.path.exists(PRESET_DIR):
