@@ -20,6 +20,7 @@ async def process_message(
         logger.debug(f"RECV: {message.body}")
         try:
             json_body = json.loads(message.body)
+            print(json_body, "requestAt:", json_body['requestedAt'])
             req_payload = ProcessRequestParam.validate(json_body)
             req_id = req_payload.id
             # TODO: override webui params
@@ -58,7 +59,10 @@ async def process_message(
             #   X Image Merge
             #   O Upload Image
             img_names = [f"{req_id}/{i}.png" for i in range(1,len(images)+1)]
-            cloud_utils.upload_image_to_gcs(images, img_names)
+            upload_succ = cloud_utils.upload_image_to_gcs(images, img_names)
+            if not upload_succ:
+                logger.error(f"Error:{req_id}::detail:UploadFail")
+                raise Exception("UploadFail")
             
             # DB
             FORMAT_DATE = datetime.date.today().strftime("%Y-%m-%d")
