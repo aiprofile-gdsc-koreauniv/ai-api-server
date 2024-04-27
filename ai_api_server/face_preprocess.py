@@ -67,7 +67,7 @@ class HeadSegmenter:
         self.segmentation_pipeline = seg_pipeline.HumanHeadSegmentationPipeline(device=device)
         self.fill_color = [0x79, 0x00, 0x30] # crimson
 
-    def segment_and_color(self, images):
+    def segment_and_color(self, images) -> List[Image.Image]:
         """
         Args:
             List[numpy.ndarray]: A list of (cropped) images.  
@@ -112,8 +112,12 @@ def preprocess_image(images: List[Image.Image], face_detector: FaceDetector, hea
     Returns:
         preprcessed_images (List[Image.Image]): A list of PIL.Image.Image.
     """
-    # TODO : Implement
-    return images
+    ndarr_images = [np.array(image) for image in images]
+    
+    results = face_detector.detect(ndarr_images)
+    cropped_images = face_detector.crop_faces(results=results, image=ndarr_images, margin=2.5)
+    processed_images = head_segmenter.segment_and_color(cropped_images)
+    return processed_images
 
 face_detector: FaceDetector = None
 head_segmenter: HeadSegmenter = None
