@@ -1,4 +1,4 @@
-import PIL
+import os
 import PIL.Image as Image
 from dto import Background, Gender
 from config import NEG_PROMPT, POS_PROMPT, WEBUI_URL
@@ -208,9 +208,10 @@ class T2IArgs(BaseModel):
 
 async def webui_t2i(gender: Gender, 
                     background: Background, 
+                    batch_size: int,
                     ip_imgs: List[str], 
                     reactor_img: str,
-                    )-> tuple[bool, Union[List[PIL.Image.Image], str]]:
+                    )-> tuple[bool, Union[List[Image.Image], str]]:
     result = []
     t2i_url = WEBUI_URL + "/sdapi/v1/txt2img"
     controlnet_params = [ ControlNetArgs(image=img, model="ip-adapter-plus-face_sd15 [7f7a633a]", module="ip-adapter_clip_sd15", weight=0.33) for img in ip_imgs]
@@ -240,13 +241,15 @@ async def webui_t2i(gender: Gender,
     reactor_args = ScriptArgs(args=ReactorArgs(src_img=reactor_img).to_list())
     script_config = AlwaysOnScripts(ControlNet=controlnet_args, reactor=reactor_args)
     t2i_payload = T2IArgs(prompt=prompt,
-                                negative_prompt=neg_prompt,
-                                alwayson_scripts=script_config
-                                )
+                            negative_prompt=neg_prompt,
+                            alwayson_scripts=script_config,
+                            batch_size=batch_size,
+                            )
     succ, response = await utils.requestPostAsync(t2i_url, t2i_payload.dict())
     if succ: 
-        # result = [utils.decodeBase642Img(img_str) for img_str in response["images"][0]]
-        result = [utils.decodeBase642Img(response["images"][0])]
+        if os.environ.get('ENV') == 'dev':
+            [utils.decodeBase642Img(img_str).save(f"res_{idx}.png") for idx, img_str in enumerate(response["images"])]
+        result = [utils.decodeBase642Img(img_str) for img_str in response["images"]]
     else: 
         return (False, "RequestFail")
     return succ, result

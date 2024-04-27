@@ -4,6 +4,7 @@ from PIL import Image
 from typing import List
 import httpx
 import base64
+from dto import Background
 from logger import logger
 from config import TIMEOUT_SEC, PRESET_DIR, ROUND_MASK_PATH, MASK_PATH, FRAME_PATH
 import random
@@ -185,41 +186,8 @@ def decodeBase642Img(base64_str: str)-> Image.Image:
     return Image.open(image_bytes_io)
 
 
-def merge_frame(image=None, frame=None,
-                image_path=None, frame_path=None,
-                frame_number=None,
-                result_path=None) -> Image.Image:
 
-    ## Load PIL Image instance of frame / image from path if Image instances were not given
-    if image is None and image_path is not None:
-        image = Image.open(image_path).convert("RGBA")
-    if frame is None and frame_path is not None:
-        frame = Image.open(frame_path).convert("RGBA")
-
-    ## Load mask image instance accorading to the frame_number
-    mask_path = ROUND_MASK_PATH if frame_number == 1 else MASK_PATH
-    mask = Image.open(mask_path).convert("L")
-
-    ## Set the left-top coordinate of the masked area of the frame
-    if frame_number == 0: paste_coord = (43, 172)
-    elif frame_number in (1, 2): paste_coord = (43, 211)
-    elif frame_number in (3, 4): paste_coord = (43, 197)
-    else: ...
-
-    ## Resize image to (1040, 1428)
-    image_cropped = image.resize((1040, 1428), Image.LANCZOS).crop((0,0,1040,1428))
-    sample_masked = Image.new("RGBA", image_cropped.size, (255, 255, 255, 0))  # 빈 이미지 생성 (투명 배경)
-    sample_masked.paste(image_cropped, (0, 0), mask=mask)
-
-    ## paste resized image to frame
-    frame.paste(sample_masked, paste_coord, sample_masked)
-
-    # ## save the pasted image
-    # frame.save(result_path)
-    return frame
-
-def getFrame(idx: int, color: str)-> Image.Image:
-    return Image.open(f"{FRAME_PATH}/set{idx}_{color}.png").convert("RGBA")
+# @@ Preprocess Utils ############################
 
 def sample_imgs(input_list: list):
     if len(input_list) > 3:
@@ -232,3 +200,36 @@ def sample_imgs(input_list: list):
 
 def sample_one_img(input_list: list):
     return random.choice(input_list)
+
+
+
+# @@ Postprocess Utils ############################
+
+def getFrame(idx: int)-> Image.Image:
+    return Image.open(f"{FRAME_PATH}/{idx}.png").convert("RGBA")
+
+
+def merge_frame(images: List[Image.Image], bg: Background)->List[Image.Image]:
+    mask = Image.new("L", (1024, 1440), 255)
+    # mask = images[0].convert("L")
+    dummy_frame = getFrame(1)
+    pos = ((dummy_frame.size[0] - images[0].size[0]) // 2, (dummy_frame.size[1] - images[0].size[1]) // 2)
+    result = []
+    if bg == Background.CRIMSON:
+        for idx in range(1,4):
+            frame = getFrame(idx)
+            frame.paste(images[idx-1], pos, mask)
+            result.append(frame)
+        return result
+    elif bg == Background.BLACK:
+        for idx in range(4,7):
+            frame = getFrame(idx)
+            frame.paste(images[idx-4], pos, mask)
+            result.append(frame)
+        return result
+    elif bg == Background.IVORY:
+        for idx in range(7,9):
+            frame = getFrame(idx)
+            frame.paste(images[idx-7], pos, mask)
+            result.append(frame)
+        return result

@@ -8,12 +8,11 @@ import face_preprocess
 from api import webui_t2i
 from logger import logger
 import setup
-import utils as utils
-import cloud_utils as cloud_utils
-from dto import BaseResponse, ProcessRequestParam, ProcessData, ProcessResponse, StatusData, StatusResponse, UpdateUrlParam
+import utils
+import cloud_utils
+from dto import Background, BaseResponse, ProcessRequestParam, ProcessData, ProcessResponse, StatusData, StatusResponse, UpdateUrlParam
 from config import BUCKET_PREFIX, WEBUI_URL
 import config as config
-from face_preprocess import preprocess_image
 import traceback
 
 app = FastAPI(
@@ -67,19 +66,24 @@ async def process(req_payload: ProcessRequestParam):
             logger.error(f"Error::id:{req_id}::detail:DownloadFail")
             raise Exception("DownloadFail")
 
-        processed_images =  preprocess_image(images=src_imgs, 
-                                             bg_color=req_payload.param.background,
-                                             face_detector=face_preprocess.face_detector, 
-                                             head_segmenter=face_preprocess.head_segmenter)
+        result = []
+        for bg in Background:
 
-        sampled_img_str_list = utils.sample_imgs([utils.encodeImg2Base64(img) for img in processed_images])
-        succ, result = await webui_t2i(gender=req_payload.param.gender, 
-                                       background=req_payload.param.background, 
-                                       ip_imgs=sampled_img_str_list, 
-                                       reactor_img=utils.sample_one_img(sampled_img_str_list))
-        if not succ:
-            logger.error(f"Error::id:{req_id}::detail:{result}")
-            raise Exception(f"{result}")
+            processed_images =  face_preprocess.preprocess_image(images=src_imgs, 
+                                                bg=bg,
+                                                face_detector=face_preprocess.face_detector, 
+                                                head_segmenter=face_preprocess.head_segmenter)
+
+            sampled_img_str_list = utils.sample_imgs([utils.encodeImg2Base64(img) for img in processed_images])
+            succ, t2i_result = await webui_t2i(gender=req_payload.param.gender, 
+                                        background=bg, 
+                                        batch_size=2 if bg == Background.IVORY else 3,
+                                        ip_imgs=sampled_img_str_list, 
+                                        reactor_img=utils.sample_one_img(sampled_img_str_list))
+            if not succ:
+                logger.error(f"Error::id:{req_id}::detail:{t2i_result}")
+                raise Exception(f"{t2i_result}")
+            result += utils.merge_frame(t2i_result, bg)
 
         # TODO: postprocess image
         #   X Image Merge

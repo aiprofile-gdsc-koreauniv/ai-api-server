@@ -12,15 +12,14 @@ str2gender = {gender.value : gender for gender in Gender}
 
 class Background(str, Enum):
     CRIMSON = "crimson"
-    IVORY = "ivory"
     BLACK = "black"
+    IVORY = "ivory"
 str2background = {background.value : background for background in Background}
 
 
 # @@ Dto ############################
 class APIPresetParam(BaseModel):
     gender: Gender
-    background: Background
 
 class UpdateUrlParam(BaseModel):
     url: str
