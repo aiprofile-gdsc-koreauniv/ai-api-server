@@ -16,7 +16,7 @@ class FaceDetector:
     def warmup_model(self, imgsz=640):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         dummy_img = torch.zeros((1, 3, imgsz, imgsz), device=device)
-        self.model.predict(dummy_img, task='detect')
+        self.model.predict(dummy_img, task='detect', verbose=False)
 
     def detect(self, images, imgsz=640, max_det=1):
         """
@@ -104,7 +104,7 @@ def align_pil_image(img: Image.Image)->Image.Image:
                 img = img.transpose(Image.ROTATE_90)
     return img
 
-def preprocess_image(images: List[Image.Image], bg_color: Background, face_detector: FaceDetector, head_segmenter: HeadSegmenter) -> List[Image.Image]:
+def preprocess_image(images: List[Image.Image], bg: Background, face_detector: FaceDetector, head_segmenter: HeadSegmenter) -> List[Image.Image]:
     """
 
     Args:
@@ -115,12 +115,15 @@ def preprocess_image(images: List[Image.Image], bg_color: Background, face_detec
     Returns:
         preprcessed_images (List[Image.Image]): A list of PIL.Image.Image.
     """
-    if bg_color == Background.CRIMSON:
+    if bg == Background.CRIMSON:
         bg_color = [0x79, 0x00, 0x30]
-    elif bg_color == Background.IVORY:
+    elif bg == Background.IVORY:
         bg_color = [0xFF, 0xFF, 0xF0]
-    elif bg_color == Background.BLACK:
+    elif bg == Background.BLACK:
         bg_color = [0x33, 0x33, 0x33]
+    else:
+        print("Invalid Background color", bg)
+        raise ValueError("Invalid Background color")
 
     ndarr_images = [np.array(image) for image in images]
     
@@ -129,7 +132,7 @@ def preprocess_image(images: List[Image.Image], bg_color: Background, face_detec
     processed_images = head_segmenter.segment_and_color(images=cropped_images, bg_color=bg_color)
     if os.environ.get('ENV') == 'dev':
         for idx, img in enumerate(processed_images):
-            img.save(f'./preproc_{idx}.jpg')
+            img.save(f'./preproc_{idx}_{bg.value}.jpg')
     return processed_images
 
 face_detector: FaceDetector = None
