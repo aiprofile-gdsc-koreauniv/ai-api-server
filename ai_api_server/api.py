@@ -217,13 +217,13 @@ async def webui_t2i(gender: Gender,
 
     if gender == Gender.GIRL:
         prompt = "korean girl" + POS_PROMPT 
-        controlnet_params.append(ControlNetArgs(image=WOMAN_BASE_IMG))
+        controlnet_params.append(ControlNetArgs(image=WOMAN_BASE_IMG, weight=0.4))
     elif gender == Gender.MAN:
         prompt = "korean man" + POS_PROMPT
-        controlnet_params.append(ControlNetArgs(image=MAN_BASE_IMG))
+        controlnet_params.append(ControlNetArgs(image=MAN_BASE_IMG, weight=0.4))
     elif gender == Gender.BOY:
         prompt = "korean boy" + POS_PROMPT
-        controlnet_params.append(ControlNetArgs(image=MAN_BASE_IMG))
+        controlnet_params.append(ControlNetArgs(image=MAN_BASE_IMG, weight=0.4))
     else:
         return (False, "Invalid_Gender")
 
@@ -245,6 +245,7 @@ async def webui_t2i(gender: Gender,
                                 )
     succ, response = await utils.requestPostAsync(t2i_url, t2i_payload.dict())
     if succ: 
+        # result = [utils.decodeBase642Img(img_str) for img_str in response["images"][0]]
         result = [utils.decodeBase642Img(response["images"][0])]
     else: 
         return (False, "RequestFail")
