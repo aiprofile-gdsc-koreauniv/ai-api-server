@@ -10,52 +10,51 @@ class FaceDetector:
     def __init__(self, model_path):
         self.model = YOLO(model_path, task='detect')
         self.warmup_model(imgsz=640)  
-        self.original_image = None
-        self.results = None
 
     def warmup_model(self, imgsz=640):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         dummy_img = torch.zeros((1, 3, imgsz, imgsz), device=device)
         self.model.predict(dummy_img, task='detect')
 
-
     def detect(self, images, imgsz=640, max_det=1):
         """
         Args:
-            image_paths (List[numpy.ndarray]): A List of images for detecting.
+            images (List[numpy.ndarray]): A List of images for detecting.
             imgsz (int, optional): Resizing size. Defaults to 640.
             max_det (int, optional): Maximum # of detections per image. Defaults to 1.
 
         Returns:
             Python generator of Results.
         """
-        self.original_image = images
-        self.results = self.model(self.original_image, 
-                                  max_det=max_det, 
-                                  imgsz=imgsz,)
-        return self.results
+        results = self.model(images, 
+                             max_det=max_det, 
+                             imgsz=imgsz,)
+        return results
 
-    def crop_faces(self, margin):
+    def crop_faces(self, results, image, margin):
         """
         Args:
+            results (List[ultralytics.engine.results.Results]): Results returned by "detect" method.
+            original_image (List[numpy.ndarray]):  A List of images for cropping. 
             margin (float): A margin value to add around the detected face bbox.
 
         Returns:
             List[numpy.ndarray]: A list of cropped images containing the detected faces.
         """
         cropped_images = []
-        for i, r in enumerate(self.results):
+        for i, r in enumerate(results):
             for box in r.boxes.xyxy:
                 x1, y1, x2, y2 = map(lambda x: int(x.item()), box[:4])
-                new_x1, new_y1, new_x2, new_y2 = self.calculate_margins(x1, y1, x2, y2, margin, i)
-                cropped_img = self.original_image[i][new_y1:new_y2, new_x1:new_x2]
+                new_x1, new_y1, new_x2, new_y2 = self.calculate_margins(x1, y1, x2, y2, margin, i, image)
+                cropped_img = image[i][new_y1:new_y2, new_x1:new_x2]
                 cropped_images.append(cropped_img)
         return cropped_images
+    
 
-    def calculate_margins(self, x1, y1, x2, y2, margin, i):
+    def calculate_margins(self, x1, y1, x2, y2, margin, i, image):
         bbox_width = x2 - x1
         bbox_height = y2 - y1
-        image_width, image_height = self.original_image[i].shape[1], self.original_image[i].shape[0]
+        image_width, image_height = image[i].shape[1], image[i].shape[0]
         new_x1 = max(0, x1 - margin * 0.2 * bbox_width)
         new_y1 = max(0, y1 - margin * 0.3 * bbox_height)
         new_x2 = min(image_width, x2 + margin * 0.2 * bbox_width) 
@@ -118,4 +117,6 @@ def preprocess_image(images: List[Image.Image], face_detector: FaceDetector, hea
 
 face_detector: FaceDetector = None
 head_segmenter: HeadSegmenter = None
+
+
 
