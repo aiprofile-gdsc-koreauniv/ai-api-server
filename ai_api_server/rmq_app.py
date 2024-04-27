@@ -1,11 +1,12 @@
 import asyncio
+import traceback
 import aio_pika
 import json
 import datetime
-from api import AlwaysOnScripts, ControlNetArgs, ReactorArgs, ScriptArgs, T2IArgs
+from api import webui_t2i
 import cloud_utils
 from cloud_utils import db_client
-from face_preprocess import preprocess_image, head_segmenter, face_detector
+import face_preprocess
 import utils
 from dto import ProcessErrorParam, ProcessRequestParam, ProcessResponseParam
 from aiormq import DeliveryError
@@ -24,47 +25,39 @@ async def process_message(
             req_payload = ProcessRequestParam.validate(json_body)
             req_id = req_payload.id
             # TODO: override webui params
-            # TODO: preprocess
-            #   O Download Images -> Select Pose? IP?
-            #   X Detect, Seg Face
-            #   O Convert to base64
-            #   Send to WEBUI
+
+            # GCS get images
             succ, src_imgs = cloud_utils.download_image_from_gcs(req_payload.imagePaths)
             if not succ:
-                logger.error(f"Error:{req_id}::detail:DownloadFail")
+                logger.error(f"Error::id:{req_id}::detail:DownloadFail")
                 raise Exception("DownloadFail")
 
-            processed_images =  preprocess_image(src_imgs, face_detector, head_segmenter)
+            # Preprocess images
+            processed_images =  face_preprocess.preprocess_image(images=src_imgs, 
+                                                bg_color=req_payload.param.background,
+                                                face_detector=face_preprocess.face_detector, 
+                                                head_segmenter=face_preprocess.head_segmenter)
 
-            # TODO: preprocess selection logic
-            selected_img = processed_images[0]
-            selected_img.save("selected_img.png")
-            image_str = utils.encodeImg2Base64(selected_img)
-
-            t2i_url = WEBUI_URL + "/sdapi/v1/txt2img"
-            controlnet_args = ScriptArgs(args=[ControlNetArgs(image=image_str)])
-            reactor_args = ScriptArgs(args=ReactorArgs(src_img=image_str, swap_in_generated_img=False).to_list())
-            script_config = AlwaysOnScripts(ControlNet=controlnet_args, reactor=reactor_args)
-            t2i_payload = T2IArgs(prompt="((realistic, photo by canon film camera)), portrait of a korean man, detailed skin, portrait:1.5, ((white shirts)), ID photo, upper body, ((simple crimson background:1.5)), looking at viewer, neck, black hair, medium-shot, upper body, canon eos, crewneck t shirt",
-                                    negative_prompt="tattoo, phone, small person, Drawings, abstract art, cartoons, surrealist painting, conceptual drawing, graphics, (low resolution:1.4), ((blurry:1.3)), (worst quality:1.3), (low quality:1.3), huge breasts, (NSFW:1.5), blurry, messy drawing, hand, finger, naked, nude,(long body :1.3), (mutation, poorly drawn :1.2),text font ui, error, long neck, blurred, lowers, low res, bad shadow, disappearing thigh, old photo, low res, black and white, black and white filter, colorless, nipple:1.5, muscle, text:1.5, text symbol:1.5, cap, hat, helmet, logo:1.5, grey, strap, cartoon,CGI, render, illustration, painting, drawing logo, stripe pattern, hand, backpack:1.7, necklace:1.3, turtleneck:1.3, muffler:1.3, scalf:1.3, stripes pattern, polka dots pattern, plaid pattern, checkered pattern, chevron pattern, cardigan:1.3, uniform, apron:1.5, vest:1.5, hand, see through, sheer top",
-                                    alwayson_scripts=script_config
-                                    )
-            succ, response = await utils.requestPostAsync(t2i_url, t2i_payload.dict())
+            sampled_img_str_list = utils.sample_imgs([utils.encodeImg2Base64(img) for img in processed_images])
+            succ, result = await webui_t2i(gender=req_payload.param.gender, 
+                                        background=req_payload.param.background, 
+                                        ip_imgs=sampled_img_str_list, 
+                                        reactor_img=utils.sample_one_img(sampled_img_str_list))
             if not succ:
-                logger.error(f"Error:{req_id}::detail:RequestFail")
-                return {"error": response}
-            images = [utils.decodeBase642Img(img_str) for img_str in response["images"]]
+                logger.error(f"Error::id:{req_id}::detail:{result}")
+                raise Exception(f"{result}")
 
             # TODO: postprocess image
             #   X Image Merge
-            #   O Upload Image
-            img_names = [f"{req_id}/{i}.png" for i in range(1,len(images)+1)]
-            upload_succ = cloud_utils.upload_image_to_gcs(images, img_names)
+
+            # GCS upload images
+            img_names = [f"{req_id}/{i}.png" for i in range(1,len(result)+1)]
+            upload_succ = cloud_utils.upload_image_to_gcs(result, img_names)
             if not upload_succ:
                 logger.error(f"Error:{req_id}::detail:UploadFail")
                 raise Exception("UploadFail")
-            
-            # DB
+
+            # DB response
             FORMAT_DATE = datetime.date.today().strftime("%Y-%m-%d")
             response = ProcessResponseParam(id=req_id, 
                                    email=req_payload.email, 
@@ -79,7 +72,7 @@ async def process_message(
         except Exception as e:
             await message.reject(requeue=False)
             if req_id is not None:
-                logger.error(f"Error:{req_payload.id}::detail:{e}")
+                logger.error(f"Error:{req_payload.id}::detail:{e} : {traceback.format_exc()}")
                 response = ProcessErrorParam(id=req_payload.id, 
                                             createdAt=datetime.datetime.now(),
                                             error=str(e) if e is not None else "Unknown",)
@@ -87,7 +80,7 @@ async def process_message(
                 await utils.requestPostAsyncData("https://ntfy.sh/horangstudio-engine",
                     payload=f"ProcessException id: {req_payload.id} 🔥\ndetail: {e}".encode(encoding='utf-8'))
             else:
-                logger.error(f"Error:InvalidMsgFmt::detail:{message.body}")
+                logger.error(f"Error:InvalidMsgFmt::detail:{message.body} : {traceback.format_exc()}")
                 await utils.requestPostAsyncData("https://ntfy.sh/horangstudio-engine",
                     payload=f"ProcessException id: unknown 🔥\ndetail: {e}".encode(encoding='utf-8'))
         except:
@@ -131,16 +124,16 @@ async def setup_queue(loop: asyncio.AbstractEventLoop) -> None:
         await channel.set_qos(prefetch_count=CONCUR_LIMIT)
         queue = await channel.declare_queue(RMQ_QUEUE, auto_delete=False, durable=True)
         logger.info(f"Connected to RMQ: {RMQ_HOST}:{RMQ_PORT}:{RMQ_QUEUE}")
+        await queue.consume(process_message)
 
-        consumer = await queue.consume(process_message)
     except Exception as e:
         datetime_str = datetime.now().strftime("%Y%m%d-%H:%M:%S")
-        logger.exception(f"{datetime_str} SetupRMQ", exc_info=e)
+        logger.error(f"{datetime_str} SetupRMQ: {e} {traceback.format_exc()}")
 
     try:
         await asyncio.Future()
     finally:
-        print("Closing RMQ Connection")
+        logger.info(f"Closing connection to RMQ: {RMQ_HOST}:{RMQ_PORT}:{RMQ_QUEUE}")
         await connection.close()
 
 

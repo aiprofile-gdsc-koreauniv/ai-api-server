@@ -220,3 +220,15 @@ def merge_frame(image=None, frame=None,
 
 def getFrame(idx: int, color: str)-> Image.Image:
     return Image.open(f"{FRAME_PATH}/set{idx}_{color}.png").convert("RGBA")
+
+def sample_imgs(input_list: list):
+    if len(input_list) > 3:
+        return random.sample(input_list, 3)
+    else:
+        result = input_list[:]
+        while len(result) < 3:
+            result.append(random.choice(input_list))
+        return result
+
+def sample_one_img(input_list: list):
+    return random.choice(input_list)

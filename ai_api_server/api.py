@@ -1,6 +1,12 @@
-from typing import Any, List
+import PIL
+import PIL.Image as Image
+from dto import Background, Gender
+from config import NEG_PROMPT, POS_PROMPT, WEBUI_URL
+import utils
+from typing import Any, List, Union
 from pydantic import BaseModel
-
+WOMAN_BASE_IMG = utils.encodeImg2Base64(Image.open("female_preset.png"))
+MAN_BASE_IMG = utils.encodeImg2Base64(Image.open("male_preset.png"))
 
 class ControlNetArgs(BaseModel):
     image: str
@@ -31,8 +37,8 @@ class ReactorArgs():
                  restore_face: str = 'CodeFormer', 
                  restore_visibility: int = 1, 
                  restore_face_upscale: bool = True, 
-                 upscaler_type: str = None, 
-                 upscaler_scale: int = 1, 
+                 upscaler_type: str = 'Lanczos', 
+                 upscaler_scale: int = 2, 
                  upscaler_visibility: int = 1, 
                  swap_in_source_img: bool = True, 
                  swap_in_generated_img: bool = True, 
@@ -161,10 +167,10 @@ class T2IArgs(BaseModel):
     prompt: str = ""
     negative_prompt: str = ""
     alwayson_scripts: AlwaysOnScripts = {}
-    sampler_name: str = "DPM++ 2M Karras"
+    sampler_name: str = "DPM++ 3M SDE Karras"
     batch_size: int = 1
     cfg_scale: int = 7
-    seed: int = 42
+    seed: int = -1
     seed_enable_extras: bool = True
     seed_resize_from_h: int = -1
     seed_resize_from_w: int = -1
@@ -200,3 +206,46 @@ class T2IArgs(BaseModel):
     tiling: bool = False
 
 
+async def webui_t2i(gender: Gender, 
+                    background: Background, 
+                    ip_imgs: List[str], 
+                    reactor_img: str,
+                    )-> tuple[bool, Union[List[PIL.Image.Image], str]]:
+    result = []
+    t2i_url = WEBUI_URL + "/sdapi/v1/txt2img"
+    controlnet_params = [ ControlNetArgs(image=img, model="ip-adapter-plus-face_sd15 [7f7a633a]", module="ip-adapter_clip_sd15", weight=0.33) for img in ip_imgs]
+
+    if gender == Gender.GIRL:
+        prompt = "korean girl" + POS_PROMPT 
+        controlnet_params.append(ControlNetArgs(image=WOMAN_BASE_IMG))
+    elif gender == Gender.MAN:
+        prompt = "korean man" + POS_PROMPT
+        controlnet_params.append(ControlNetArgs(image=MAN_BASE_IMG))
+    elif gender == Gender.BOY:
+        prompt = "korean boy" + POS_PROMPT
+        controlnet_params.append(ControlNetArgs(image=MAN_BASE_IMG))
+    else:
+        return (False, "Invalid_Gender")
+
+    if background == Background.CRIMSON:
+        neg_prompt = NEG_PROMPT + ", ((white background:1.5))"
+    elif background == Background.BLACK:
+        neg_prompt = NEG_PROMPT + ", ((white background:1.5))"
+    elif background == Background.IVORY:
+        neg_prompt = NEG_PROMPT + ", ((black background:1.5))"
+    else:
+        return (False, "Invalid_Background")
+
+    controlnet_args = ScriptArgs(args=controlnet_params)
+    reactor_args = ScriptArgs(args=ReactorArgs(src_img=reactor_img).to_list())
+    script_config = AlwaysOnScripts(ControlNet=controlnet_args, reactor=reactor_args)
+    t2i_payload = T2IArgs(prompt=prompt,
+                                negative_prompt=neg_prompt,
+                                alwayson_scripts=script_config
+                                )
+    succ, response = await utils.requestPostAsync(t2i_url, t2i_payload.dict())
+    if succ: 
+        result = [utils.decodeBase642Img(response["images"][0])]
+    else: 
+        return (False, "RequestFail")
+    return succ, result

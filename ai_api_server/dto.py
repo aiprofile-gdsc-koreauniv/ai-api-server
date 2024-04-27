@@ -1,13 +1,26 @@
 import datetime
+from enum import Enum
 from pydantic import BaseModel
 from typing import List, Optional
+
+# @@ Type ############################
+class Gender(str, Enum):
+    GIRL = "girl"
+    MAN = "man"
+    BOY = "boy"
+str2gender = {gender.value : gender for gender in Gender}
+
+class Background(str, Enum):
+    CRIMSON = "crimson"
+    IVORY = "ivory"
+    BLACK = "black"
+str2background = {background.value : background for background in Background}
 
 
 # @@ Dto ############################
 class APIPresetParam(BaseModel):
-    is_male: bool
-    is_black: bool
-    is_blonde: bool
+    gender: Gender
+    background: Background
 
 class UpdateUrlParam(BaseModel):
     url: str
@@ -80,7 +93,7 @@ class OverrideParam(BaseModel):
 
 class ProcessRequestParam(BaseModel):
     id: str
-    # param: APIPresetParam
+    param: APIPresetParam
     email: str
     userId: str
     imagePaths: List[str]

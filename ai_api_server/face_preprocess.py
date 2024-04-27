@@ -5,10 +5,11 @@ import numpy as np
 from PIL import Image
 from ultralytics import YOLO
 import head_segmentation.segmentation_pipeline as seg_pipeline
+from dto import Background
 
 class FaceDetector: 
     def __init__(self, model_path):
-        self.model = YOLO(model_path, task='detect')
+        self.model = YOLO(model_path, task='detect', verbose=False)
         self.warmup_model(imgsz=640)  
 
     def warmup_model(self, imgsz=640):
@@ -28,7 +29,9 @@ class FaceDetector:
         """
         results = self.model(images, 
                              max_det=max_det, 
-                             imgsz=imgsz,)
+                             imgsz=imgsz,
+                             verbose=False,
+                             )
         return results
 
     def crop_faces(self, results, image, margin):
@@ -65,7 +68,6 @@ class HeadSegmenter:
     def __init__(self, device='cpu'):
         self.device = device
         self.segmentation_pipeline = seg_pipeline.HumanHeadSegmentationPipeline(device=device)
-        self.fill_color = [0x79, 0x00, 0x30] # crimson
 
     def segment_and_color(self, images) -> List[Image.Image]:
         """
@@ -81,11 +83,11 @@ class HeadSegmenter:
             segmented_images.append(Image.fromarray(segmented_image))
         return segmented_images
 
-    def segment_head(self, image):
+    def segment_head(self, image, bg_color=[0x79, 0x00, 0x30]):
         segmentation_map = self.segmentation_pipeline.predict(image)
         segmentation_overlay = cv2.cvtColor(segmentation_map, cv2.COLOR_GRAY2RGB)
-        segmentation_overlay[segmentation_map == 0] = self.fill_color
-        result_image = np.where(segmentation_overlay == self.fill_color, segmentation_overlay, image)
+        segmentation_overlay[segmentation_map == 0] = bg_color
+        result_image = np.where(segmentation_overlay == bg_color, segmentation_overlay, image)
         return result_image.astype('uint8')
 
 def align_pil_image(img: Image.Image)->Image.Image:
@@ -101,7 +103,7 @@ def align_pil_image(img: Image.Image)->Image.Image:
                 img = img.transpose(Image.ROTATE_90)
     return img
 
-def preprocess_image(images: List[Image.Image], face_detector: FaceDetector, head_segmenter: HeadSegmenter) -> List[Image.Image]:
+def preprocess_image(images: List[Image.Image], bg_color: Background, face_detector: FaceDetector, head_segmenter: HeadSegmenter) -> List[Image.Image]:
     """
 
     Args:
@@ -112,6 +114,13 @@ def preprocess_image(images: List[Image.Image], face_detector: FaceDetector, hea
     Returns:
         preprcessed_images (List[Image.Image]): A list of PIL.Image.Image.
     """
+    if bg_color == Background.CRIMSON:
+        bg_color = [0x79, 0x00, 0x30]
+    elif bg_color == Background.IVORY:
+        bg_color = [0xFF, 0xFF, 0xF0]
+    elif bg_color == Background.BLACK:
+        bg_color = [0x00, 0x00, 0x00]
+
     ndarr_images = [np.array(image) for image in images]
     
     results = face_detector.detect(ndarr_images)

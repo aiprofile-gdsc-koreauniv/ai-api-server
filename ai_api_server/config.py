@@ -34,6 +34,8 @@ RMQ_PORT = int(os.environ.get('RMQ_PORT'))
 RMQ_QUEUE = os.environ.get('RMQ_QUEUE')
 RMQ_USER = os.environ.get('RMQ_USER')
 RMQ_PWD = os.environ.get('RMQ_PWD')
+POS_PROMPT = os.environ.get('POS_PROMPT')
+NEG_PROMPT = os.environ.get('NEG_PROMPT')
 
 
 if not os.path.exists(PRESET_DIR):
