@@ -1,3 +1,4 @@
+import os
 from typing import List
 import cv2
 import torch
@@ -69,7 +70,7 @@ class HeadSegmenter:
         self.device = device
         self.segmentation_pipeline = seg_pipeline.HumanHeadSegmentationPipeline(device=device)
 
-    def segment_and_color(self, images) -> List[Image.Image]:
+    def segment_and_color(self, images, bg_color: List[int]=[0x79, 0x00, 0x30]) -> List[Image.Image]:
         """
         Args:
             List[numpy.ndarray]: A list of (cropped) images.  
@@ -79,11 +80,11 @@ class HeadSegmenter:
         """
         segmented_images = []
         for image in images:
-            segmented_image = self.segment_head(image)
+            segmented_image = self.segment_head(image, bg_color)
             segmented_images.append(Image.fromarray(segmented_image))
         return segmented_images
 
-    def segment_head(self, image, bg_color=[0x79, 0x00, 0x30]):
+    def segment_head(self, image, bg_color: List[int] = [0x79, 0x00, 0x30]):
         segmentation_map = self.segmentation_pipeline.predict(image)
         segmentation_overlay = cv2.cvtColor(segmentation_map, cv2.COLOR_GRAY2RGB)
         segmentation_overlay[segmentation_map == 0] = bg_color
@@ -119,17 +120,40 @@ def preprocess_image(images: List[Image.Image], bg_color: Background, face_detec
     elif bg_color == Background.IVORY:
         bg_color = [0xFF, 0xFF, 0xF0]
     elif bg_color == Background.BLACK:
-        bg_color = [0x00, 0x00, 0x00]
+        bg_color = [0x33, 0x33, 0x33]
 
     ndarr_images = [np.array(image) for image in images]
     
     results = face_detector.detect(ndarr_images)
     cropped_images = face_detector.crop_faces(results=results, image=ndarr_images, margin=2.5)
-    processed_images = head_segmenter.segment_and_color(cropped_images)
+    processed_images = head_segmenter.segment_and_color(images=cropped_images, bg_color=bg_color)
+    if os.environ.get('ENV') == 'dev':
+        for idx, img in enumerate(processed_images):
+            img.save(f'./preproc_{idx}.jpg')
     return processed_images
 
 face_detector: FaceDetector = None
 head_segmenter: HeadSegmenter = None
 
-
-
+if __name__ == "__main__":
+    import time
+    import cv2
+    face_detector = FaceDetector('yolov8n-face.onnx')
+    head_segmenter = HeadSegmenter('cuda')
+    # a = [Image.open('test.jpg'), Image.open('source.png')]
+    image_paths= ["./1.jpeg", "./2.jpeg", "./3.jpeg"]
+    image_list = [
+    cv2.cvtColor(cv2.imread(img_path, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB) 
+    for img_path in image_paths
+    ]
+    a = [Image.open('qwe.jpeg'),
+        Image.open('qwe1.jpeg'),
+        ]
+    results = preprocess_image(a, face_detector, head_segmenter)
+    # results = face_detector.detect(a)
+    # cropped_images = face_detector.crop_faces(results=results, image=a, margin=2)
+    # # cropped_images = [ x.resize((512, 512)) for x in cropped_images]
+    # predicted_segmap = head_segmenter.segment_and_color(cropped_images)
+    
+    for i, result in enumerate(results):
+        result.save(f'./test_{i}.jpg')
