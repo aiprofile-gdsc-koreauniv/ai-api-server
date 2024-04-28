@@ -29,7 +29,7 @@ class ControlNetArgs(BaseModel):
 
 class ReactorArgs():
     def __init__(self, 
-                 src_img: str, 
+                 src_img: None = None, 
                  enable: bool = True, 
                  face_numbers: str = '0', 
                  target_face_numbers: str = '0', 
@@ -209,24 +209,26 @@ class T2IArgs(BaseModel):
 async def webui_t2i(gender: Gender, 
                     background: Background, 
                     batch_size: int,
+                    model_name: str,
                     ip_imgs: List[str], 
-                    reactor_img: str,
+                    # reactor_img: str,
                     )-> tuple[bool, Union[List[Image.Image], str]]:
     result = []
     t2i_url = WEBUI_URL + "/sdapi/v1/txt2img"
-    controlnet_params = [ ControlNetArgs(image=img, model="ip-adapter-plus-face_sd15 [7f7a633a]", module="ip-adapter_clip_sd15", weight=0.33) for img in ip_imgs]
-
+    controlnet_params = []
+    
     if gender == Gender.GIRL:
         prompt = "korean girl" + POS_PROMPT 
-        controlnet_params.append(ControlNetArgs(image=WOMAN_BASE_IMG, weight=0.4))
+        controlnet_params.append(ControlNetArgs(image=WOMAN_BASE_IMG, weight=0.4, processor_res=512))
     elif gender == Gender.MAN:
         prompt = "korean man" + POS_PROMPT
-        controlnet_params.append(ControlNetArgs(image=MAN_BASE_IMG, weight=0.4))
+        controlnet_params.append(ControlNetArgs(image=MAN_BASE_IMG, weight=0.4, processor_res=512))
     elif gender == Gender.BOY:
         prompt = "korean boy" + POS_PROMPT
-        controlnet_params.append(ControlNetArgs(image=MAN_BASE_IMG, weight=0.4))
+        controlnet_params.append(ControlNetArgs(image=MAN_BASE_IMG, weight=0.4, processor_res=512))
     else:
         return (False, "Invalid_Gender")
+    controlnet_params += [ ControlNetArgs(image=img, model="ip-adapter-plus-face_sd15 [7f7a633a]", module="ip-adapter_clip_sd15", weight=0.33) for img in ip_imgs]
 
     if background == Background.CRIMSON:
         neg_prompt = NEG_PROMPT + ", ((white background:1.5))"
@@ -238,7 +240,8 @@ async def webui_t2i(gender: Gender,
         return (False, "Invalid_Background")
 
     controlnet_args = ScriptArgs(args=controlnet_params)
-    reactor_args = ScriptArgs(args=ReactorArgs(src_img=reactor_img).to_list())
+    # reactor_args = ScriptArgs(args=ReactorArgs(src_img=reactor_img).to_list())
+    reactor_args = ScriptArgs(args=ReactorArgs(select_source=1, face_model_filename=(model_name+".safetensors")).to_list())
     script_config = AlwaysOnScripts(ControlNet=controlnet_args, reactor=reactor_args)
     t2i_payload = T2IArgs(prompt=prompt,
                             negative_prompt=neg_prompt,
@@ -253,3 +256,15 @@ async def webui_t2i(gender: Gender,
     else: 
         return (False, "RequestFail")
     return succ, result
+
+async def build_face_model(img_list: List[Image.Image], model_name: str):
+    model_url = WEBUI_URL + "/reactor/facemodels"
+    img_str_list = [utils.encodeImg2Base64(img) for img in img_list]
+    payload = {
+        "source_images": img_str_list,
+        "name": model_name,
+        "compute_method": 0,
+        "shape_check": False
+    }
+    succ, response = await utils.requestPostAsync(model_url, payload)
+    return succ, response

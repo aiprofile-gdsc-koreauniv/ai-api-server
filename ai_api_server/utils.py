@@ -190,11 +190,11 @@ def decodeBase642Img(base64_str: str)-> Image.Image:
 # @@ Preprocess Utils ############################
 
 def sample_imgs(input_list: list):
-    if len(input_list) > 3:
-        return random.sample(input_list, 3)
+    if len(input_list) > 2:
+        return random.sample(input_list, 2)
     else:
         result = input_list[:]
-        while len(result) < 3:
+        while len(result) < 2:
             result.append(random.choice(input_list))
         return result
 
