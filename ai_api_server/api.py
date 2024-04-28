@@ -216,26 +216,30 @@ async def webui_t2i(gender: Gender,
     result = []
     t2i_url = WEBUI_URL + "/sdapi/v1/txt2img"
     controlnet_params = []
+    neg_prompt = ""
     
     if gender == Gender.GIRL:
         prompt = "korean girl" + POS_PROMPT 
+        neg_prompt = "boy, man," + NEG_PROMPT
         controlnet_params.append(ControlNetArgs(image=WOMAN_BASE_IMG, weight=0.4, processor_res=512))
     elif gender == Gender.MAN:
         prompt = "korean man" + POS_PROMPT
+        neg_prompt = "girl, woman," + NEG_PROMPT
         controlnet_params.append(ControlNetArgs(image=MAN_BASE_IMG, weight=0.4, processor_res=512))
     elif gender == Gender.BOY:
         prompt = "korean boy" + POS_PROMPT
+        neg_prompt = "girl, woman," + NEG_PROMPT
         controlnet_params.append(ControlNetArgs(image=MAN_BASE_IMG, weight=0.4, processor_res=512))
     else:
         return (False, "Invalid_Gender")
-    controlnet_params += [ ControlNetArgs(image=img, model="ip-adapter-plus-face_sd15 [7f7a633a]", module="ip-adapter_clip_sd15", weight=0.33) for img in ip_imgs]
+    controlnet_params += [ ControlNetArgs(image=img, model="ip-adapter-plus-face_sd15 [7f7a633a]", module="ip-adapter_clip_sd15", weight=0.5) for img in ip_imgs]
 
     if background == Background.CRIMSON:
-        neg_prompt = NEG_PROMPT + ", ((white background:1.5))"
+        neg_prompt = neg_prompt + ", ((white background:1.5))"
     elif background == Background.BLACK:
-        neg_prompt = NEG_PROMPT + ", ((white background:1.5))"
+        neg_prompt = neg_prompt + ", ((white background:1.5))"
     elif background == Background.IVORY:
-        neg_prompt = NEG_PROMPT + ", ((black background:1.5))"
+        neg_prompt = neg_prompt + ", ((black background:1.5))"
     else:
         return (False, "Invalid_Background")
 
