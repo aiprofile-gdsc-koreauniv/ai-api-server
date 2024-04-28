@@ -3,7 +3,7 @@ import traceback
 import aio_pika
 import json
 import datetime
-from api import webui_t2i
+from api import build_face_model, webui_t2i
 import cloud_utils
 from cloud_utils import db_client
 import face_preprocess
@@ -39,13 +39,21 @@ async def process_message(
                                                     face_detector=face_preprocess.face_detector, 
                                                     head_segmenter=face_preprocess.head_segmenter)
 
+                # For first iteration
+                if bg == Background.CRIMSON:
+                    succ, response = await build_face_model(img_list=processed_images, model_name=req_id)
+                    if not succ:
+                        raise Exception(f"RequestBuildFaceFail:{response}")
+
                 # T2I
                 sampled_img_str_list = utils.sample_imgs([utils.encodeImg2Base64(img) for img in processed_images])
                 succ, t2i_result = await webui_t2i(gender=req_payload.param.gender, 
                                             background=bg, 
                                             batch_size=2 if bg == Background.IVORY else 3,
+                                            model_name=req_id,
                                             ip_imgs=sampled_img_str_list, 
-                                            reactor_img=utils.sample_one_img(sampled_img_str_list))
+                                            # reactor_img=utils.sample_one_img(sampled_img_str_list)
+                                            )
                 if not succ:
                     logger.error(f"Error::id:{req_id}::detail:{t2i_result}")
                     raise Exception(f"{t2i_result}")
