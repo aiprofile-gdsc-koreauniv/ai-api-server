@@ -113,6 +113,33 @@ def convert_to_rgb(image_array):
         rgb_image = image_array
     return rgb_image
 
+def remove_smaller_components_pil(image: Image.Image, bg_color: List[int]):
+    """
+
+    Args:
+        image (Image.Image):
+        bg_color (List[int]):
+
+    Returns:
+        output (Image.Image):
+    """
+    image = np.array(image)
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    background_mask = np.all(image == np.array(list(reversed(bg_color))), axis=-1)
+    foreground = np.where(background_mask[..., None], 0, image)
+
+    gray = cv2.cvtColor(foreground, cv2.COLOR_RGB2GRAY) 
+    _, binary = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
+
+    _, labels, stats, _ = cv2.connectedComponentsWithStats(binary, connectivity=8)
+    largest = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])
+    output = np.full_like(image, list(reversed(bg_color)))
+    output[labels == largest] = image[labels == largest]
+    output = cv2.cvtColor(output, cv2.COLOR_BGR2RGB)
+    output = Image.fromarray(output)
+
+    return output
+
 def preprocess_image(images: List[Image.Image], bg: Background, face_detector: FaceDetector, head_segmenter: HeadSegmenter) -> List[Image.Image]:
     """
 
@@ -138,6 +165,8 @@ def preprocess_image(images: List[Image.Image], bg: Background, face_detector: F
     results = face_detector.detect(ndarr_images)
     cropped_images = face_detector.crop_faces(results=results, image=ndarr_images, margin=2.5)
     processed_images = head_segmenter.segment_and_color(images=cropped_images, bg_color=bg_color)
+    processed_images = [remove_smaller_components_pil(image=image, bg_color=bg_color) for image in processed_images]
+    
     if os.environ.get('ENV') == 'dev':
         for idx, img in enumerate(processed_images):
             img.save(f'./preproc_{idx}_{bg.value}.jpg')
