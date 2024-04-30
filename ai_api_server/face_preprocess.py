@@ -168,15 +168,3 @@ if __name__ == "__main__":
     
     for i, result in enumerate(results):
         result.save(f'./test_{i}.jpg')
-
-def convert_to_rgb(image_path):
-    image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
-    
-    if len(image.shape) == 2:
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-    elif image.shape[2] == 4:
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
-    else:
-        rgb_image = image
-    
-    return rgb_image
