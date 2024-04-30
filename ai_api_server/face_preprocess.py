@@ -104,6 +104,15 @@ def align_pil_image(img: Image.Image)->Image.Image:
                 img = img.transpose(Image.ROTATE_90)
     return img
 
+def convert_to_rgb(image_array):
+    if len(image_array.shape) == 2:
+        rgb_image = cv2.cvtColor(image_array, cv2.COLOR_GRAY2RGB)
+    elif image_array.shape[2] == 4:
+        rgb_image = cv2.cvtColor(image_array, cv2.COLOR_RGBA2RGB)
+    else:
+        rgb_image = image_array
+    return rgb_image
+
 def preprocess_image(images: List[Image.Image], bg: Background, face_detector: FaceDetector, head_segmenter: HeadSegmenter) -> List[Image.Image]:
     """
 
@@ -125,8 +134,7 @@ def preprocess_image(images: List[Image.Image], bg: Background, face_detector: F
         print("Invalid Background color", bg)
         raise ValueError("Invalid Background color")
 
-    ndarr_images = [np.array(image) for image in images]
-    
+    ndarr_images = [convert_to_rgb(np.array(image)) for image in images]    
     results = face_detector.detect(ndarr_images)
     cropped_images = face_detector.crop_faces(results=results, image=ndarr_images, margin=2.5)
     processed_images = head_segmenter.segment_and_color(images=cropped_images, bg_color=bg_color)
@@ -160,3 +168,15 @@ if __name__ == "__main__":
     
     for i, result in enumerate(results):
         result.save(f'./test_{i}.jpg')
+
+def convert_to_rgb(image_path):
+    image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+    
+    if len(image.shape) == 2:
+        rgb_image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+    elif image.shape[2] == 4:
+        rgb_image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
+    else:
+        rgb_image = image
+    
+    return rgb_image
