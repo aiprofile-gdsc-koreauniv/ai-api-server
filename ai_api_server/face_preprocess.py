@@ -161,12 +161,13 @@ def preprocess_image(images: List[Image.Image], bg: Background, face_detector: F
         print("Invalid Background color", bg)
         raise ValueError("Invalid Background color")
 
+    images = [align_pil_image(image) for image in images]
     ndarr_images = [convert_to_rgb(np.array(image)) for image in images]    
     results = face_detector.detect(ndarr_images)
     cropped_images = face_detector.crop_faces(results=results, image=ndarr_images, margin=2.5)
     processed_images = head_segmenter.segment_and_color(images=cropped_images, bg_color=bg_color)
     processed_images = [remove_smaller_components_pil(image=image, bg_color=bg_color) for image in processed_images]
-    
+
     if os.environ.get('ENV') == 'dev':
         for idx, img in enumerate(processed_images):
             img.save(f'./preproc_{idx}_{bg.value}.jpg')
