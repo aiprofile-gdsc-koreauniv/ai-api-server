@@ -1,7 +1,7 @@
 ####################################################
 ############# Build & Run Management ###############
 ####################################################
-.PHONY: help build build_dev run run_dev install_model setup_model_dir bootstrap_extensions install_extension list_extensions install_extensions_dependencies install_custom_dependencies default
+.PHONY: help build build_prod run run_dev install_model setup_model_dir bootstrap_extensions install_extension list_extensions install_extensions_dependencies install_custom_dependencies default
 
 IMAGE_NAME = ai-api-server
 
@@ -15,6 +15,12 @@ build:
 	@### build : build base docker image for only api-server
 	@echo "Building Docker image..."
 	@docker build -f dev.dockerfile -t $(IMAGE_NAME):base .
+
+build_prod:
+	@### build : build base docker image for only api-server
+	@read -p "Enter the image tag: " IMAGE_TAG; \
+	echo "Building Docker image..."; \
+	docker build -f prod.dockerfile -t $(IMAGE_NAME):$$IMAGE_TAG .
 
 run:
 	@### run : run docker image as $(IMAGE_NAME):base
