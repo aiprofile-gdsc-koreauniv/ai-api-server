@@ -219,15 +219,15 @@ async def webui_t2i(gender: Gender,
     neg_prompt = ""
     
     if gender == Gender.GIRL:
-        prompt = "korean girl" + POS_PROMPT 
+        prompt = "a korean girl, " + POS_PROMPT 
         neg_prompt = "boy, man," + NEG_PROMPT
         controlnet_params.append(ControlNetArgs(image=WOMAN_BASE_IMG, weight=0.4, processor_res=512))
     elif gender == Gender.MAN:
-        prompt = "korean man" + POS_PROMPT
+        prompt = "a korean man, " + POS_PROMPT
         neg_prompt = "girl, woman," + NEG_PROMPT
         controlnet_params.append(ControlNetArgs(image=MAN_BASE_IMG, weight=0.4, processor_res=512))
     elif gender == Gender.BOY:
-        prompt = "korean boy" + POS_PROMPT
+        prompt = "a korean boy, " + POS_PROMPT
         neg_prompt = "girl, woman," + NEG_PROMPT
         controlnet_params.append(ControlNetArgs(image=MAN_BASE_IMG, weight=0.4, processor_res=512))
     else:
@@ -244,7 +244,6 @@ async def webui_t2i(gender: Gender,
         return (False, "Invalid_Background")
 
     controlnet_args = ScriptArgs(args=controlnet_params)
-    # reactor_args = ScriptArgs(args=ReactorArgs(src_img=reactor_img).to_list())
     reactor_args = ScriptArgs(args=ReactorArgs(select_source=1, face_model_filename=(model_name+".safetensors")).to_list())
     script_config = AlwaysOnScripts(ControlNet=controlnet_args, reactor=reactor_args)
     t2i_payload = T2IArgs(prompt=prompt,
