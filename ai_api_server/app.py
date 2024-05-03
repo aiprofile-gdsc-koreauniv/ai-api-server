@@ -98,7 +98,7 @@ async def process(req_payload: ProcessRequestParam):
         img_names = [f"{req_id}/{i}.png" for i in range(1,len(result)+1)]
         cloud_utils.upload_image_to_gcs(result, img_names)
 
-        FORMAT_DATE = datetime.date.today().strftime("%Y-%m-%d")
+        FORMAT_DATE = datetime.now().strftime("%Y-%m-%d")
         return JSONResponse(
                 status_code=200,
                 content=ProcessResponse(message=f"Success created for ID:{req_id}", 
