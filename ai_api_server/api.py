@@ -250,6 +250,8 @@ async def webui_t2i(gender: Gender,
                             negative_prompt=neg_prompt,
                             alwayson_scripts=script_config,
                             batch_size=batch_size,
+                            seed=2861043403,
+                            sampler_name="Restart",
                             )
     succ, response = await utils.requestPostAsync(t2i_url, t2i_payload.dict())
     if succ: 
