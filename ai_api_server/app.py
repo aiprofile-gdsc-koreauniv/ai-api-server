@@ -98,11 +98,12 @@ async def process(req_payload: ProcessRequestParam):
         img_names = [f"{req_id}/{i}.png" for i in range(1,len(result)+1)]
         cloud_utils.upload_image_to_gcs(result, img_names)
 
+        FORMAT_DATE = datetime.date.today().strftime("%Y-%m-%d")
         return JSONResponse(
                 status_code=200,
                 content=ProcessResponse(message=f"Success created for ID:{req_id}", 
                                         data=ProcessData(id=req_id, 
-                                                         image_paths=[f"{BUCKET_PREFIX}/{img_name}" for img_name in img_names]).dict()
+                                                         image_paths=[f"{BUCKET_PREFIX}/{FORMAT_DATE}/{img_name}" for img_name in img_names]).dict()
                 ).dict())
     except Exception as e:
         logger.error(f"Error::id:{req_id}::detail:{e} :: : {traceback.format_exc()}")
