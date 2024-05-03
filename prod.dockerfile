@@ -33,13 +33,13 @@ RUN  apt-get update &&\
         rm -rf /var/lib/apt/lists/* 
 
 WORKDIR /app
+COPY --from=builder /usr/lib/x86_64-linux-gnu/ /usr/lib/x86_64-linux-gnu/
+COPY --from=builder /app/.venv /app/.venv
 COPY ./ai_api_server /app/ai_api_server
-COPY ./frames /app
+COPY ./frames /app/frames
 COPY ./.env /app
 COPY ./cloud-storage-credentials.json /app
 COPY ./*_preset.png /app
-COPY --from=builder /usr/lib/x86_64-linux-gnu/ /usr/lib/x86_64-linux-gnu/
-COPY --from=builder /app/.venv /app/.venv
 
 EXPOSE 9001
 
