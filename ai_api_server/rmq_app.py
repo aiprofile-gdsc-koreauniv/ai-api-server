@@ -52,6 +52,8 @@ async def process_message(
                                             batch_size=2 if bg == Background.IVORY else 3,
                                             model_name=req_id,
                                             ip_imgs=sampled_img_str_list, 
+                                            hair=req_payload.param.hair,
+                                            glasses=req_payload.param.glasses,
                                             # reactor_img=utils.sample_one_img(sampled_img_str_list)
                                             )
                 if not succ:
