@@ -16,10 +16,16 @@ class Background(str, Enum):
     IVORY = "ivory"
 str2background = {background.value : background for background in Background}
 
+class Hair(str, Enum):
+    LONG = "long"
+    SHORT = "short"
+
 
 # @@ Dto ############################
 class APIPresetParam(BaseModel):
     gender: Gender
+    hair: Optional[Hair] = Hair.LONG
+    glasses: Optional[bool] = False
 
 class UpdateUrlParam(BaseModel):
     url: str
