@@ -14,8 +14,7 @@ async def on_startup(loop):
 
 
 def on_shutdown():
-    global face_detector, head_segmenter
-    del face_detector, head_segmenter
+    del face_preprocess.face_detector, face_preprocess.head_segmenter
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
