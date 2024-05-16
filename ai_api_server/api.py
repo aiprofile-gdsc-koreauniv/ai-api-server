@@ -1,5 +1,6 @@
 import os
 import PIL.Image as Image
+from logger import logger
 from dto import Background, Gender
 from config import NEG_PROMPT, POS_PROMPT, WEBUI_URL
 import utils
@@ -259,6 +260,7 @@ async def webui_t2i(gender: Gender,
             [utils.decodeBase642Img(img_str).save(f"res_{idx}.png") for idx, img_str in enumerate(response["images"])]
         result = [utils.decodeBase642Img(img_str) for img_str in response["images"]]
     else: 
+        logger.error(f"Error-detail:{response}")
         return (False, "RequestFail")
     return succ, result
 
