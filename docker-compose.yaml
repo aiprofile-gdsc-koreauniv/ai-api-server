@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   api-server1:
-    image: kyookim/ai-profile-api:prod0.1
+    image: kyookim/ai-profile-api:prod0.2
     ports:
       - "9001:9001"
       - "8001:5672"
@@ -24,7 +24,7 @@ services:
             count: all
 
   webui1:
-    image: kyookim/ai-diffusion:dev0.4
+    image: kyookim/ai-diffusion:dev0.5
     ports:
       - "7861:7860"
     healthcheck:
