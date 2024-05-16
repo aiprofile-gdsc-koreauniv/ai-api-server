@@ -110,7 +110,7 @@ async def setup_queue(loop: asyncio.AbstractEventLoop) -> None:
         )
         channel = await connection.channel()
         await channel.set_qos(prefetch_count=CONCUR_LIMIT)
-        queue = await channel.declare_queue(RMQ_QUEUE, auto_delete=False, durable=True)
+        queue = await channel.declare_queue(RMQ_QUEUE, auto_delete=False, durable=True, arguments={"x-max-priority": 10})
         logger.info(f"Connected to RMQ: {RMQ_HOST}:{RMQ_PORT}:{RMQ_QUEUE}")
         await queue.consume(process_message)
 
