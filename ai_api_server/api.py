@@ -1,10 +1,10 @@
 import os
 import PIL.Image as Image
 from logger import logger
-from dto import Background, Gender
-from config import NEG_PROMPT, POS_PROMPT, WEBUI_URL
+from dto import Background, Gender, Hair
+from config import NEG_PROMPT, POS_PROMPT, WEBUI_URL, CONTROLNET_WEIGHTING
 import utils
-from typing import Any, List, Union
+from typing import Any, List, Optional, Union
 from pydantic import BaseModel
 WOMAN_BASE_IMG = utils.encodeImg2Base64(Image.open("female_preset.png"))
 MAN_BASE_IMG = utils.encodeImg2Base64(Image.open("male_preset.png"))
@@ -25,7 +25,8 @@ class ControlNetArgs(BaseModel):
     save_detected_map: bool = False
     threshold_a: int = -1
     threshold_b: int = -1
-    weight: float = 0.3
+    weight: float = 0.33
+    advanced_weighting: Optional[List[float]]
 
 
 class ReactorArgs():
@@ -175,7 +176,7 @@ class T2IArgs(BaseModel):
     seed_enable_extras: bool = True
     seed_resize_from_h: int = -1
     seed_resize_from_w: int = -1
-    steps: int = 30
+    steps: int = 60
     height: int = 720
     width: int = 512
     comments: dict = {}
@@ -212,6 +213,8 @@ async def webui_t2i(gender: Gender,
                     batch_size: int,
                     model_name: str,
                     ip_imgs: List[str], 
+                    hair: Hair,
+                    glasses: bool,
                     # reactor_img: str,
                     )-> tuple[bool, Union[List[Image.Image], str]]:
     result = []
@@ -223,6 +226,10 @@ async def webui_t2i(gender: Gender,
         prompt = "a korean girl, " + POS_PROMPT 
         neg_prompt = "boy, man," + NEG_PROMPT
         controlnet_params.append(ControlNetArgs(image=WOMAN_BASE_IMG, weight=0.4, processor_res=512))
+        if hair == Hair.SHORT:
+            prompt = prompt + ", short hair:1.5,"
+        elif hair == Hair.LONG:
+            prompt = prompt + ", long hair:1.5,"
     elif gender == Gender.MAN:
         prompt = "a korean man, " + POS_PROMPT
         neg_prompt = "girl, woman," + NEG_PROMPT
@@ -233,14 +240,25 @@ async def webui_t2i(gender: Gender,
         controlnet_params.append(ControlNetArgs(image=MAN_BASE_IMG, weight=0.4, processor_res=512))
     else:
         return (False, "Invalid_Gender")
-    controlnet_params += [ ControlNetArgs(image=img, model="ip-adapter-plus-face_sd15 [7f7a633a]", module="ip-adapter_clip_sd15", weight=0.5) for img in ip_imgs]
+    controlnet_params += [ ControlNetArgs(image=img, 
+                                          model="ip-adapter-plus-face_sd15 [7f7a633a]", 
+                                          module="ip-adapter_clip_sd15", 
+                                          weight=0.33,
+                                          advanced_weighting=CONTROLNET_WEIGHTING,
+                                          ) for img in ip_imgs]
+
+    if glasses:
+        prompt = prompt + ", glasses:1.5,"
 
     if background == Background.CRIMSON:
         neg_prompt = neg_prompt + ", ((white background:1.5))"
+        seed = 1952454670
     elif background == Background.BLACK:
         neg_prompt = neg_prompt + ", ((white background:1.5))"
+        seed = 1952454670
     elif background == Background.IVORY:
         neg_prompt = neg_prompt + ", ((black background:1.5))"
+        seed = 2161750643
     else:
         return (False, "Invalid_Background")
 
@@ -251,7 +269,7 @@ async def webui_t2i(gender: Gender,
                             negative_prompt=neg_prompt,
                             alwayson_scripts=script_config,
                             batch_size=batch_size,
-                            seed=2861043403,
+                            seed=seed,
                             sampler_name="Restart",
                             )
     succ, response = await utils.requestPostAsync(t2i_url, t2i_payload.dict())

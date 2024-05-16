@@ -1,3 +1,4 @@
+import json
 import os
 import datetime 
 from dotenv import load_dotenv
@@ -36,6 +37,7 @@ RMQ_USER = os.environ.get('RMQ_USER')
 RMQ_PWD = os.environ.get('RMQ_PWD')
 POS_PROMPT = os.environ.get('POS_PROMPT')
 NEG_PROMPT = os.environ.get('NEG_PROMPT')
+CONTROLNET_WEIGHTING = json.loads(os.environ.get('CONTROLNET_WEIGHTING'))
 
 
 if not os.path.exists(PRESET_DIR):
