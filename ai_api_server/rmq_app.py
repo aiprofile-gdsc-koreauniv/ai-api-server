@@ -99,27 +99,6 @@ async def process_message(
         # @ TODO @@ Inner catch does not on occur outer exception
         # @ TODO @@ Issue publish_message not working 
 
-
-
-async def publish_message(channel: aio_pika.abc.AbstractRobustChannel,body: str, retry: int) -> None:
-        try:
-            print(body, retry)
-            confirm = await channel.default_exchange.publish(
-                aio_pika.Message(body=body, 
-                                headers={"x-retry-count": retry}, 
-                                delivery_mode=aio_pika.DeliveryMode.PERSISTENT),
-                routing_key="ai-profile",
-            )
-            print("requeue:", confirm)
-        except DeliveryError as e:
-            print(f"Delivery of  failed with exception: {e}")
-        except TimeoutError:
-            print(f"Timeout occured for")
-        else:
-            print("Unhandled error")
-
-
-
 async def setup_queue(loop: asyncio.AbstractEventLoop) -> None:
     try:
         connection = await aio_pika.connect_robust(
