@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   api-server1:
-    image: kyookim/ai-profile-api:prod0.2
+    image: kyookim/ai-profile-api:prod1.0
     ports:
       - "9001:9001"
       - "8001:5672"
